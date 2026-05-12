@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\\\\app\\\\u\" -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })",
+      "mcp__shadcn__view_items_in_registries",
+      "Read(//c/Users/lramb/OneDrive/Documentos/DEV/DevLink-project/**)",
+      "WebFetch(domain:www.mapcn.dev)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\" -Recurse -Name)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\\\\components\" -Recurse -File | ForEach-Object { $_.FullName })",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "shadcn"
+  ]
+}

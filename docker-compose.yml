@@ -1,0 +1,114 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devlinks-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devlinks
+      POSTGRES_PASSWORD: devlinks_pass
+      POSTGRES_DB: devlinks_db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devlinks -d devlinks_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devlinks-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: devlinks-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devlinks-net
+
+  backend:
+    build:
+      context: ./devlinks-backend
+      dockerfile: Dockerfile.dev
+    container_name: devlinks-backend
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://devlinks:devlinks_pass@postgres:5432/devlinks_db
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - ./devlinks-backend/.env
+    volumes:
+      - ./devlinks-backend:/app
+      - /app/node_modules
+      # Sin /app/dist: volumen anónimo + Nest (rmdir) → EBUSY en Docker Desktop Windows
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run start:dev
+    networks:
+      - devlinks-net
+
+  # ── Frontend Next.js ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./devlinks-frontend
+      dockerfile: Dockerfile.dev
+    container_name: devlinks-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost/api
+      NEXT_PUBLIC_APP_URL: http://localhost
+    env_file:
+      - ./devlinks-frontend/.env.local
+    volumes:
+      - ./devlinks-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - devlinks-net
+  nginx:
+    image: nginx:alpine
+    container_name: devlinks-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - devlinks-net
+
+# ── Volúmenes ──────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+# ── Red interna ────────────────────────────────────────────
+networks:
+  devlinks-net:
+    driver: bridge

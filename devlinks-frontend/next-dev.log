@@ -1,0 +1,29 @@
+
+> devlinks-frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+✓ Ready in 3.5s
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\lramb\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\lramb\OneDrive\Documentos\DEV\DevLink-project\devlinks-frontend\package-lock.json
+
+- Experiments (use with caution):
+  ✓ useCache
+
+○ Compiling /dashboard/customize ...
+ GET /dashboard/customize 404 in 4.5s (next.js: 3.0s, proxy.ts: 367ms, application-code: 1156ms)
+ GET /dashboard 200 in 4.4s (next.js: 3.4s, proxy.ts: 343ms, application-code: 669ms)
+ GET /dashboard/customize 404 in 84ms (next.js: 18ms, proxy.ts: 11ms, application-code: 55ms)
+ GET /dashboard/customize 404 in 101ms (next.js: 15ms, proxy.ts: 11ms, application-code: 75ms)
+ GET /dashboard/customize 404 in 108ms (next.js: 17ms, proxy.ts: 11ms, application-code: 80ms)
+ GET /dashboard/customize 404 in 272ms (next.js: 13ms, proxy.ts: 186ms, application-code: 73ms)
+ GET /dashboard 200 in 167ms (next.js: 8ms, proxy.ts: 9ms, application-code: 150ms)
+ GET /dashboard/links 404 in 125ms (next.js: 76ms, proxy.ts: 9ms, application-code: 40ms)
+ GET /dashboard/links 404 in 90ms (next.js: 15ms, proxy.ts: 9ms, application-code: 67ms)
+[?25h

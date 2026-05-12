@@ -1,0 +1,134 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  displayName    String   @map("display_name")
+  bio            String?
+  location       String?
+  avatarUrl      String?  @map("avatar_url")
+  githubUsername String?  @map("github_username")
+  githubToken    String?  @map("github_token")
+  theme          String   @default("dark")
+  accentColor    String   @default("#0d9488") @map("accent_color")
+  buttonStyle    String   @default("rounded-fill") @map("button_style")
+  fontFamily     String   @default("inter") @map("font_family")
+  bgType         String   @default("flat") @map("bg_type")
+  bgColor        String   @default("#0f172a") @map("bg_color")
+  profileLayout  String   @default("classic") @map("profile_layout")
+  coverImageUrl  String   @default("") @map("cover_image_url")
+  stickers       Json?    @map("stickers")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  links          Link[]
+  projects       Project[]
+  refreshTokens  RefreshToken[]
+  profileViews   ProfileView[]
+
+  @@map("users")
+}
+
+model Link {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  title        String
+  url          String
+  icon         String?
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  clicksCount  Int      @default(0) @map("clicks_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics LinkAnalytic[]
+
+  @@index([userId])
+  @@index([userId, displayOrder])
+  @@map("links")
+}
+
+
+model LinkAnalytic {
+  id          String   @id @default(uuid())
+  linkId      String   @map("link_id")
+  visitorIp   String?  @map("visitor_ip")
+  userAgent   String?  @map("user_agent")
+  referrer    String?
+  countryCode String?  @map("country_code")
+  clickedAt   DateTime @default(now()) @map("clicked_at")
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@index([clickedAt])
+  @@map("link_analytics")
+}
+
+
+model Project {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  title        String
+  description  String?
+  url          String?
+  githubRepo   String?  @map("github_repo")
+  stars        Int      @default(0)
+  language     String?
+  imageUrl     String?  @map("image_url")
+  pinned       Boolean  @default(false)
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, pinned, stars])
+  @@map("projects")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model ProfileView {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  visitorIp   String?  @map("visitor_ip")
+  userAgent   String?  @map("user_agent")
+  referrer    String?
+  countryCode String?  @map("country_code")
+  viewedAt    DateTime @default(now()) @map("viewed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([viewedAt])
+  @@map("profile_views")
+}

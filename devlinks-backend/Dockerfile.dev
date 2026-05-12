@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────
+#  DevLinks Backend — Dockerfile DESARROLLO
+#  Hot reload activo · Prisma client generado al inicio
+# ─────────────────────────────────────────────────────────────
+
+FROM node:20-alpine
+
+# Herramientas necesarias para algunas dependencias nativas
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Instalar dependencias primero (capa cacheada)
+COPY package*.json ./
+RUN npm install
+
+# Copiar el schema de Prisma y generar el cliente
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copiar el resto del código fuente
+COPY . .
+
+EXPOSE 3001
+
+# El comando real se sobreescribe en docker-compose.yml
+CMD ["npm", "run", "start:dev"]
