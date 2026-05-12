@@ -211,7 +211,3 @@ make test-e2e
 - **Ramas:** `feat/<area>-<descripcion>`, `fix/<area>-<descripcion>`.
 
 ---
-
-## 📄 Licencia
-
-[Especificar licencia]
