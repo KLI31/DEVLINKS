@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
+import { useRef } from "react";
 import Image from "next/image";
 import { MapPin, Link2, Star, ChevronRight } from "lucide-react";
 import type {
@@ -82,6 +83,13 @@ export function PublicProfileCard({
   projects,
   githubStats,
 }: PublicProfileCardProps) {
+  const coverRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll();
+  const coverOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
+  const coverBlurPx = useTransform(scrollY, [0, 300], [0, 10]);
+  const coverBlurFilter = useTransform(coverBlurPx, (v) => `blur(${v}px)`);
+
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
   const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
   const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
@@ -166,15 +174,47 @@ export function PublicProfileCard({
       style={{ fontFamily }}
     >
       <div
+        ref={coverRef}
         className="relative w-full overflow-hidden rounded-t-[30px]"
-        style={{ height: 400, ...coverBg }}
+        style={{ height: 400 }}
       >
-        <div
+        {/* 1. Fondo sólido — siempre visible debajo de todo */}
+        <div className="absolute inset-0" style={{ background: cardBg }} />
+
+        {/* 2. Imagen de cover — visible arriba, se desvanece hacia abajo + scroll fade */}
+        <motion.div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(to bottom, transparent 40%, ${profile.bgColor}cc 72%, ${profile.bgColor}ff 100%)`,
+            ...coverBg,
+            opacity: coverOpacity,
+            scale: coverScale,
+            filter: coverBlurFilter,
+            // Mask lineal: imagen 100% visible arriba, desaparece suavemente hacia abajo
+            // Esto integra la foto con el cardBg que está debajo
+            WebkitMaskImage: `linear-gradient(to bottom,
+              #000 0%,
+              #000 45%,
+              rgba(0,0,0,0.92) 55%,
+              rgba(0,0,0,0.72) 65%,
+              rgba(0,0,0,0.45) 75%,
+              rgba(0,0,0,0.18) 85%,
+              rgba(0,0,0,0.05) 92%,
+              transparent 100%
+            )`,
+            maskImage: `linear-gradient(to bottom,
+              #000 0%,
+              #000 45%,
+              rgba(0,0,0,0.92) 55%,
+              rgba(0,0,0,0.72) 65%,
+              rgba(0,0,0,0.45) 75%,
+              rgba(0,0,0,0.18) 85%,
+              rgba(0,0,0,0.05) 92%,
+              transparent 100%
+            )`,
           }}
         />
+
+        {/* 3. Gradiente lateral izquierda/derecha (encima de la imagen) */}
         <div
           className="absolute inset-0"
           style={{
@@ -293,6 +333,10 @@ export function PublicProfileCard({
               <Link2 className="size-3 shrink-0" />
               devlinks.io/{profile.username}
             </span>
+
+            <span className="text-white max-w-sm text-center text-sm">
+              {profile.bio}
+            </span>
           </div>
 
           {socialLinks.length > 0 && (
@@ -304,19 +348,15 @@ export function PublicProfileCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   title={link.title}
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-75"
-                  style={{
-                    border: `1px solid ${profile.accentColor}35`,
-                    background: `${profile.accentColor}12`,
-                  }}
+                  className="flex size-16 shrink-0 items-center justify-center  transition-opacity hover:opacity-75 "
                 >
                   <Image
                     src={iconUrl(link.icon!, profile.accentColor)}
                     alt={link.title}
-                    width={16}
-                    height={16}
+                    width={40}
+                    height={40}
                     unoptimized
-                    className="size-4 object-contain"
+                    className="size-7 object-contain"
                   />
                 </a>
               ))}
