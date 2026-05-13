@@ -172,13 +172,13 @@ export function PublicProfileCard({
         <div
           className="absolute inset-0"
           style={{
-            background: `radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 42%, ${profile.bgColor}18 60%, ${profile.bgColor}55 80%, ${profile.bgColor}99 100%)`,
+            background: `linear-gradient(to bottom, transparent 40%, ${profile.bgColor}cc 72%, ${profile.bgColor}ff 100%)`,
           }}
         />
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(to bottom, transparent 0%, ${profile.bgColor}06 28%, ${profile.bgColor}18 44%, ${profile.bgColor}44 58%, ${profile.bgColor}88 72%, ${profile.bgColor}cc 84%, ${profile.bgColor}f5 92%, ${profile.bgColor}ff 96%)`,
+            background: `linear-gradient(to right, ${profile.bgColor}4d 0%, transparent 22%, transparent 78%, ${profile.bgColor}4d 100%)`,
           }}
         />
 
