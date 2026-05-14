@@ -3,14 +3,24 @@
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 import Image from "next/image";
-import { MapPin, Link2, Star, ChevronRight } from "lucide-react";
+import {
+  MapPin,
+  Link2,
+  Star,
+  ChevronRight,
+  ExternalLink,
+  Code2,
+  Users,
+  UserCheck,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import type {
   PublicProfile,
   Project,
   PlacedSticker,
   GithubStats,
 } from "@/types";
-import { iconUrl, isSocialIcon } from "@/lib/icons";
+import { iconUrl } from "@/lib/icons";
 import { getDevIconUrl } from "@/lib/api/github.api";
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 
@@ -57,6 +67,17 @@ const LANG_COLOR: Record<string, string> = {
 };
 
 const HEATMAP_ALPHA = ["0d", "2a", "55", "88", "cc"] as const;
+
+const PROJECT_TITLE_COLORS = [
+  "#60a5fa", // blue-400
+  "#34d399", // emerald-400
+  "#a78bfa", // violet-400
+  "#f472b6", // pink-400
+  "#fb923c", // orange-400
+  "#22d3ee", // cyan-400
+  "#4ade80", // green-400
+  "#e879f9", // fuchsia-400
+] as const;
 
 function perceivedLuminance(hex: string): number {
   const clean = hex.replace("#", "").padEnd(6, "0");
@@ -140,20 +161,19 @@ export function PublicProfileCard({
   const sortedLinks = [...profile.links].sort(
     (a, b) => a.displayOrder - b.displayOrder,
   );
-  const socialLinks = sortedLinks.filter((l) => l.icon && isSocialIcon(l.icon));
-  const regularLinks = sortedLinks.filter(
-    (l) => !l.icon || !isSocialIcon(l.icon),
-  );
+
+  const primaryLinks = sortedLinks.filter((link) => link.isPrimary);
+  const secondaryLinks = sortedLinks.filter((l) => !l.isPrimary);
   const hasProjects = projects.length > 0;
 
   const totalStars =
     githubStats?.topRepos.reduce((s, r) => s + r.stargazers_count, 0) ?? 0;
   const statsItems = githubStats
     ? [
-        { label: "Repos", value: formatCount(githubStats.totalRepos) },
-        { label: "Followers", value: formatCount(githubStats.followers) },
-        { label: "Following", value: formatCount(githubStats.user.following) },
-        { label: "Stars", value: formatCount(totalStars) },
+        { label: "Repositorios", value: formatCount(githubStats.totalRepos), Icon: Code2, iconColor: "#22d3ee" },
+        { label: "Seguidores", value: formatCount(githubStats.followers), Icon: Users, iconColor: "#4ade80" },
+        { label: "Siguiendo", value: formatCount(githubStats.user.following), Icon: UserCheck, iconColor: "#60a5fa" },
+        { label: "Stars recibidas", value: formatCount(totalStars), Icon: Star, iconColor: "#facc15" },
       ]
     : [];
 
@@ -170,8 +190,12 @@ export function PublicProfileCard({
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[480px]"
-      style={{ fontFamily }}
+      className="relative mx-auto w-full max-w-[480px] rounded-[30px]"
+      style={{
+        fontFamily,
+        boxShadow:
+          "0 12px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.03)",
+      }}
     >
       <div
         ref={coverRef}
@@ -268,7 +292,7 @@ export function PublicProfileCard({
         )}
       </div>
 
-      <div className="px-6 pb-8 pt-0" style={{ background: cardBg }}>
+      <div className="px-6 pb-8 pt-0 rounded-b-[30px]" style={{ background: cardBg }}>
         <div
           className="relative z-10 flex flex-col items-center pb-5 pt-0"
           style={{ marginTop: "-36px" }}
@@ -339,24 +363,44 @@ export function PublicProfileCard({
             </span>
           </div>
 
-          {socialLinks.length > 0 && (
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              {socialLinks.map((link) => (
+          {primaryLinks.length > 0 && (
+            <div className="mt-3 flex flex-wrap justify-center gap-3">
+              {/*{socialLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={link.title}
+                    className="flex size-10 shrink-0 items-center justify-center transition-opacity hover:opacity-75"
+                  >
+                    <Image
+                      src={iconUrl(link.icon!, profile.accentColor)}
+                      alt={link.title}
+                      width={32}
+                      height={32}
+                      unoptimized
+                      className="size-6 object-contain"
+                    />
+                  </a>
+                ))}*/}
+              {primaryLinks.map((link) => (
                 <a
                   key={link.id}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={link.title}
-                  className="flex size-16 shrink-0 items-center justify-center  transition-opacity hover:opacity-75 "
+                  className="flex size-10 shrink-0 items-center justify-center transition-all hover:opacity-80 hover:scale-110"
                 >
                   <Image
-                    src={iconUrl(link.icon!, profile.accentColor)}
+                    src={iconUrl(link.icon ?? "link", profile.accentColor)}
                     alt={link.title}
-                    width={40}
-                    height={40}
+                    width={32}
+                    height={32}
                     unoptimized
-                    className="size-7 object-contain"
+                    className="size-6 object-contain"
+                    style={{ filter: `drop-shadow(0 0 3px ${profile.accentColor}70)` }}
                   />
                 </a>
               ))}
@@ -367,31 +411,33 @@ export function PublicProfileCard({
         {statsItems.length > 0 && (
           <>
             <div className="mb-4 h-px" style={{ background: dividerColor }} />
-            <div
-              className="flex overflow-hidden rounded-xl"
-              style={{
-                background: `${profile.accentColor}0a`,
-                border: `1px solid ${profile.accentColor}18`,
-              }}
-            >
-              {statsItems.map(({ label, value }, i) => (
+            <div className="grid grid-cols-4 gap-2">
+              {statsItems.map(({ label, value, Icon, iconColor }) => (
                 <div
                   key={label}
-                  className="flex flex-1 flex-col items-center gap-0.5 py-3.5"
-                  style={
-                    i > 0
-                      ? { borderLeft: `1px solid ${profile.accentColor}18` }
-                      : undefined
-                  }
+                  className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-1"
+                  style={{
+                    background: `${iconColor}0d`,
+                    border: `1px solid ${iconColor}20`,
+                  }}
                 >
+                  <div
+                    className="flex items-center justify-center rounded-lg p-1.5"
+                    style={{
+                      background: `${iconColor}18`,
+                      boxShadow: `0 0 12px ${iconColor}30`,
+                    }}
+                  >
+                    <Icon className="size-4" style={{ color: iconColor }} />
+                  </div>
                   <span
-                    className="text-[14px] font-bold tabular-nums leading-none"
+                    className="text-[15px] font-bold tabular-nums leading-none"
                     style={{ color: textPrimary }}
                   >
                     {value}
                   </span>
                   <span
-                    className="text-[9px] uppercase tracking-wide"
+                    className="text-center text-[8px] leading-tight"
                     style={{ color: textMuted }}
                   >
                     {label}
@@ -450,6 +496,21 @@ export function PublicProfileCard({
                 </div>
               ))}
             </div>
+            <div className="mt-2 flex items-center justify-end gap-1.5">
+              <span className="text-[8px]" style={{ color: textMuted }}>Menos</span>
+              {["0a", ...HEATMAP_ALPHA].map((alpha) => (
+                <div
+                  key={alpha}
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: 2,
+                    background: `${profile.accentColor}${alpha}`,
+                  }}
+                />
+              ))}
+              <span className="text-[8px]" style={{ color: textMuted }}>Más</span>
+            </div>
           </>
         )}
 
@@ -462,101 +523,81 @@ export function PublicProfileCard({
             >
               Proyectos destacados
             </p>
-            <div className="flex flex-col gap-2">
-              {projects.map((project, i) => {
-                const deviconUrl = project.language
-                  ? getDevIconUrl(project.language)
-                  : null;
-                return (
-                  <motion.a
-                    key={project.id}
-                    href={project.url ?? undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-[52px] w-full items-center gap-3 rounded-lg px-4 py-3"
-                    style={repoStyle}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.2,
-                      delay: i * 0.05,
-                      ease: "easeOut",
-                    }}
-                    whileHover={{ y: -2, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {project.language && (
-                      <div className="shrink-0">
-                        {deviconUrl ? (
-                          <Image
-                            src={deviconUrl}
-                            alt={project.language}
-                            width={16}
-                            height={16}
-                            unoptimized
-                            className="size-4 object-contain"
-                          />
-                        ) : (
-                          <span
-                            className="block size-2 rounded-full"
-                            style={{
-                              background:
-                                LANG_COLOR[project.language] ??
-                                profile.accentColor,
-                            }}
-                          />
-                        )}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
+            <div className="grid grid-cols-3 gap-2">
+              {projects.map((project, i) => (
+                <motion.a
+                  key={project.id}
+                  href={project.url ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col justify-between rounded-lg p-3"
+                  style={repoStyle}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.05, ease: "easeOut" }}
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-1 mb-1.5">
                       <p
-                        className="truncate text-[12px] font-semibold leading-tight"
-                        style={{ color: textPrimary }}
+                        className="text-[11px] font-bold leading-tight break-all line-clamp-2"
+                        style={{ color: PROJECT_TITLE_COLORS[i % PROJECT_TITLE_COLORS.length] }}
                       >
                         {project.title || project.githubRepo}
                       </p>
-                      {project.description && (
-                        <p
-                          className="mt-0.5 truncate text-[10px] leading-relaxed"
-                          style={{ color: textMuted }}
-                        >
-                          {project.description}
-                        </p>
-                      )}
+                      <ExternalLink
+                        className="size-3 shrink-0 mt-0.5"
+                        style={{ color: `${profile.accentColor}80` }}
+                      />
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {project.language && (
+                    {project.description && (
+                      <p
+                        className="text-[10px] leading-relaxed line-clamp-2"
+                        style={{ color: textMuted }}
+                      >
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-2.5 flex items-center justify-between gap-1">
+                    {project.language ? (
+                      <span
+                        className="flex items-center gap-1 text-[9px]"
+                        style={{ color: textMuted }}
+                      >
                         <span
-                          className="rounded px-1.5 py-0.5 text-[9px] font-medium"
+                          className="block size-1.5 rounded-full shrink-0"
                           style={{
-                            background: `${profile.accentColor}15`,
-                            color: `${profile.accentColor}bb`,
-                            border: `1px solid ${profile.accentColor}20`,
+                            background:
+                              LANG_COLOR[project.language] ?? profile.accentColor,
                           }}
-                        >
-                          {project.language}
-                        </span>
-                      )}
-                      {project.stars > 0 && (
-                        <span
-                          className="flex items-center gap-0.5 text-[9px]"
-                          style={{ color: textMuted }}
-                        >
-                          <Star className="size-2.5 fill-current" />
-                          {project.stars >= 1000
-                            ? `${(project.stars / 1000).toFixed(1)}k`
-                            : project.stars}
-                        </span>
-                      )}
-                    </div>
-                  </motion.a>
-                );
-              })}
+                        />
+                        {project.language}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    {project.stars > 0 && (
+                      <span
+                        className="flex items-center gap-0.5 text-[9px] shrink-0"
+                        style={{ color: textMuted }}
+                      >
+                        <Star className="size-2.5 fill-current" />
+                        {project.stars >= 1000
+                          ? `${(project.stars / 1000).toFixed(1)}k`
+                          : project.stars}
+                      </span>
+                    )}
+                  </div>
+                </motion.a>
+              ))}
             </div>
           </>
         )}
 
-        {regularLinks.length > 0 && (
+        {secondaryLinks.length > 0 && (
           <>
             <div className="my-4 h-px" style={{ background: dividerColor }} />
             <p
@@ -566,14 +607,28 @@ export function PublicProfileCard({
               Links
             </p>
             <div className="flex flex-col gap-2">
-              {regularLinks.map((link, i) => (
+              {secondaryLinks.map((link, i) => (
                 <motion.a
                   key={link.id}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3"
-                  style={{ borderRadius: buttonRadius, ...linkStyle }}
+                  className={cn(
+                    "flex w-full overflow-hidden",
+                    link.previewImage
+                      ? "flex-col"
+                      : "min-h-[52px] items-center gap-3 px-4 py-3",
+                  )}
+                  style={{
+                    borderRadius: buttonRadius,
+                    ...(link.previewImage
+                      ? {
+                          border: `1px solid ${profile.accentColor}35`,
+                          background: `${profile.accentColor}08`,
+                          boxShadow: `0 4px 24px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2), 0 0 0 1px ${profile.accentColor}15`,
+                        }
+                      : linkStyle),
+                  }}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -584,26 +639,47 @@ export function PublicProfileCard({
                   whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {link.icon && (
+                  {link.previewImage && (
                     <Image
-                      src={iconUrl(link.icon, profile.accentColor)}
-                      alt={link.icon}
-                      width={16}
-                      height={16}
+                      src={link.previewImage}
+                      alt={link.title}
+                      width={480}
+                      height={120}
+                      className="h-[120px] w-full object-cover"
+                      style={{
+                        borderTopLeftRadius: buttonRadius,
+                        borderTopRightRadius: buttonRadius,
+                      }}
                       unoptimized
-                      className="size-4 shrink-0 object-contain"
                     />
                   )}
-                  <span
-                    className="flex-1 truncate text-[12px] font-medium"
-                    style={{ color: textPrimary }}
+                  <div
+                    className={cn(
+                      "flex items-center gap-3",
+                      link.previewImage && "px-4 py-3",
+                    )}
                   >
-                    {link.title}
-                  </span>
-                  <ChevronRight
-                    className="size-4 shrink-0"
-                    style={{ color: textMuted }}
-                  />
+                    {link.icon && (
+                      <Image
+                        src={iconUrl(link.icon, profile.accentColor)}
+                        alt={link.icon}
+                        width={16}
+                        height={16}
+                        unoptimized
+                        className="size-4 shrink-0 object-contain"
+                      />
+                    )}
+                    <span
+                      className="flex-1 truncate text-[12px] font-medium"
+                      style={{ color: textPrimary }}
+                    >
+                      {link.title}
+                    </span>
+                    <ChevronRight
+                      className="size-4 shrink-0"
+                      style={{ color: textMuted }}
+                    />
+                  </div>
                 </motion.a>
               ))}
             </div>
