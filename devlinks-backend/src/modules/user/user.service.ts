@@ -37,7 +37,7 @@ export type UserPublic = {
 };
 
 export type UserProfile = Omit<UserPublic, 'email'> & {
-  links: Pick<Link, 'id' | 'title' | 'url' | 'icon' | 'displayOrder'>[];
+  links: Pick<Link, 'id' | 'title' | 'url' | 'icon' | 'previewImage' | 'isPrimary' | 'displayOrder'>[];
 };
 
 @Injectable()
@@ -143,6 +143,8 @@ export class UserService {
             title: true,
             url: true,
             icon: true,
+            previewImage: true,
+            isPrimary: true,
             displayOrder: true,
           },
         },

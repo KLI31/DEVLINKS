@@ -14,7 +14,6 @@ import { DisconnectGithubDto } from './dto/disconnect-github.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 
 @Controller('github')
-@UseGuards(JwtAuthGuard)
 export class GithubController {
   constructor(private readonly githubService: GithubService) {}
 
@@ -29,6 +28,7 @@ export class GithubController {
   }
 
   @Post('disconnect')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   disconnect(@Body() body: DisconnectGithubDto) {
     return this.githubService.disconnect(body.username);

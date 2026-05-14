@@ -17,6 +17,8 @@ export type LinkPublic = Pick<
   | 'title'
   | 'url'
   | 'icon'
+  | 'previewImage'
+  | 'isPrimary'
   | 'displayOrder'
   | 'isActive'
   | 'createdAt'
@@ -37,6 +39,8 @@ export class LinkService {
         title: true,
         url: true,
         icon: true,
+        previewImage: true,
+        isPrimary: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -60,6 +64,8 @@ export class LinkService {
         title: dto.title,
         url: dto.url,
         icon: dto.icon ?? null,
+        previewImage: dto.previewImage ?? null,
+        isPrimary: dto.isPrimary ?? false,
         displayOrder,
       },
       select: {
@@ -68,6 +74,8 @@ export class LinkService {
         title: true,
         url: true,
         icon: true,
+        previewImage: true,
+        isPrimary: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -89,6 +97,8 @@ export class LinkService {
         ...(dto.title !== undefined && { title: dto.title }),
         ...(dto.url !== undefined && { url: dto.url }),
         ...(dto.icon !== undefined && { icon: dto.icon }),
+        ...(dto.previewImage !== undefined && { previewImage: dto.previewImage }),
+        ...(dto.isPrimary !== undefined && { isPrimary: dto.isPrimary }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
       select: {
@@ -97,6 +107,8 @@ export class LinkService {
         title: true,
         url: true,
         icon: true,
+        previewImage: true,
+        isPrimary: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -152,6 +164,8 @@ export class LinkService {
         title: true,
         url: true,
         icon: true,
+        previewImage: true,
+        isPrimary: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -169,6 +183,8 @@ export class LinkService {
         title: true,
         url: true,
         icon: true,
+        previewImage: true,
+        isPrimary: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "motion/react";
@@ -10,9 +10,11 @@ import { linkSchema, type LinkFormValues } from "@/lib/validations/link.schema";
 import { linksApi } from "@/lib/api";
 import { resolveErrorMessage } from "@/lib/messages";
 import { useLinksStore } from "@/store/links-store";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +44,7 @@ export function LinkFormModal({
     handleSubmit,
     reset,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<LinkFormValues>({
@@ -50,11 +53,16 @@ export function LinkFormModal({
       title: "",
       url: "",
       icon: undefined,
+      previewImage: undefined,
+      isPrimary: false,
     },
   });
 
   const [showPicker, setShowPicker] = useState(false);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const iconValue = useWatch({ control, name: "icon" });
+  const previewImageValue = useWatch({ control, name: "previewImage" });
+  const isPrimaryValue = useWatch({ control, name: "isPrimary" });
 
   useEffect(() => {
     if (open) {
@@ -63,12 +71,43 @@ export function LinkFormModal({
           title: editingLink.title,
           url: editingLink.url,
           icon: editingLink.icon ?? undefined,
+          previewImage: editingLink.previewImage ?? undefined,
+          isPrimary: editingLink.isPrimary,
         });
       } else {
-        reset({ title: "", url: "", icon: undefined });
+        reset({ title: "", url: "", icon: undefined, previewImage: undefined, isPrimary: false });
       }
     }
   }, [open, editingLink, reset]);
+
+  useEffect(() => {
+    if (isPrimaryValue) {
+      setValue("previewImage", undefined, { shouldDirty: true });
+    }
+  }, [isPrimaryValue, setValue]);
+
+  const fetchPreview = useCallback(async () => {
+    const currentUrl = getValues("url");
+    const currentIsPrimary = getValues("isPrimary");
+    if (!currentUrl || !currentUrl.startsWith("http")) return;
+    if (currentIsPrimary) return;
+
+    setIsFetchingPreview(true);
+    try {
+      const preview = await linksApi.getPreview(currentUrl);
+      if (preview.image) {
+        setValue("previewImage", preview.image, { shouldDirty: true });
+      }
+      const currentTitle = getValues("title");
+      if (!currentTitle && preview.title) {
+        setValue("title", preview.title, { shouldValidate: true, shouldDirty: true });
+      }
+    } catch {
+      // Silently fail — preview is optional
+    } finally {
+      setIsFetchingPreview(false);
+    }
+  }, [getValues, setValue]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -84,6 +123,8 @@ export function LinkFormModal({
           title: data.title,
           url: data.url,
           icon: data.icon,
+          previewImage: data.isPrimary ? undefined : data.previewImage,
+          isPrimary: data.isPrimary,
         });
         updateLink(updated);
         toast.success("Link actualizado correctamente");
@@ -92,6 +133,8 @@ export function LinkFormModal({
           title: data.title,
           url: data.url,
           icon: data.icon,
+          previewImage: data.isPrimary ? undefined : data.previewImage,
+          isPrimary: data.isPrimary,
         });
         addLink(created);
         toast.success("Link creado correctamente");
@@ -131,16 +174,64 @@ export function LinkFormModal({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="url">URL *</Label>
-            <Input
-              id="url"
-              placeholder="https://github.com/usuario"
-              {...register("url")}
-              disabled={isSubmitting}
-              aria-invalid={errors.url ? "true" : "false"}
-            />
+            <div className="relative">
+              <Input
+                id="url"
+                placeholder="https://github.com/usuario"
+                {...register("url")}
+                disabled={isSubmitting}
+                aria-invalid={errors.url ? "true" : "false"}
+                onBlur={fetchPreview}
+                className={cn(isFetchingPreview && "pr-10")}
+              />
+              {isFetchingPreview && (
+                <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
+            </div>
             {errors.url && (
               <p className="text-xs text-destructive">{errors.url.message}</p>
             )}
+          </div>
+
+          {previewImageValue && !isPrimaryValue && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Vista previa</Label>
+              <div className="relative overflow-hidden rounded-lg border border-border">
+                <Image
+                  src={previewImageValue}
+                  alt="Vista previa del link"
+                  width={400}
+                  height={120}
+                  className="h-[120px] w-full object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue("previewImage", undefined, { shouldDirty: true })
+                  }
+                  className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white transition-colors hover:bg-black/80"
+                >
+                  Quitar
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Link principal</span>
+              <span className="text-xs text-muted-foreground">
+                Solo muestra el icono en el perfil. Sin preview.
+              </span>
+            </div>
+            <Switch
+              checked={isPrimaryValue}
+              onCheckedChange={(checked) =>
+                setValue("isPrimary", checked, { shouldDirty: true })
+              }
+              disabled={isSubmitting}
+            />
           </div>
 
           <div className="flex flex-col gap-2">

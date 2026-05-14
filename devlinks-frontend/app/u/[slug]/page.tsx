@@ -12,6 +12,8 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
   const { slug } = await params;
   const profile = await userApi.getPublicProfile(slug).catch(() => null);
 
+  console.log(profile);
+
   return {
     title: profile?.displayName ?? slug,
     description: profile?.bio ?? `Perfil de ${slug} en DevLinks`,
@@ -36,16 +38,21 @@ export default async function PublicProfilePage({
       : Promise.resolve(null as GithubStats | null),
   ]);
 
-  const pageBg = profile.bgType === "gradient"
-    ? `linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 85%, #000 15%) 0%, color-mix(in srgb, ${profile.bgColor} 60%, ${profile.accentColor} 40%) 100%)`
-    : profile.bgColor;
+  const pageBg =
+    profile.bgType === "gradient"
+      ? `linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 85%, #000 15%) 0%, color-mix(in srgb, ${profile.bgColor} 60%, ${profile.accentColor} 40%) 100%)`
+      : profile.bgColor;
 
   return (
     <main
       className="flex min-h-screen flex-col items-center justify-start px-4 py-16"
       style={{ background: pageBg }}
     >
-      <PublicProfileCard profile={profile} projects={projects} githubStats={githubStats} />
+      <PublicProfileCard
+        profile={profile}
+        projects={projects}
+        githubStats={githubStats}
+      />
     </main>
   );
 }

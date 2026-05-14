@@ -2,6 +2,7 @@ import {
   IsString,
   IsUrl,
   IsOptional,
+  IsBoolean,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -23,4 +24,13 @@ export class CreateLinkDto {
   @IsString()
   @MaxLength(100)
   icon?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  previewImage?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
 }

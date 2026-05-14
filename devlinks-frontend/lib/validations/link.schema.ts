@@ -7,6 +7,8 @@ export const linkSchema = z.object({
     .max(100, "Máximo 100 caracteres"),
   url: z.string().url("Introduce una URL válida").max(2048),
   icon: z.string().max(100).optional(),
+  previewImage: z.string().max(2048).optional(),
+  isPrimary: z.boolean().optional().default(false),
 });
 
 export type LinkFormValues = z.infer<typeof linkSchema>;

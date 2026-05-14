@@ -1,6 +1,13 @@
 import { apiService } from "./api-service";
 import type { LinkItem, CreateLinkPayload, UpdateLinkPayload } from "@/types";
 
+export interface LinkPreviewResponse {
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+}
+
 export const linksApi = {
   getAll: () => apiService.get<LinkItem[]>("/links"),
 
@@ -18,4 +25,9 @@ export const linksApi = {
 
   toggle: (id: string) =>
     apiService.patch<LinkItem>(`/links/${id}/toggle`),
+
+  getPreview: (url: string) =>
+    apiService.get<LinkPreviewResponse>(
+      `/links/preview?url=${encodeURIComponent(url)}`,
+    ),
 };

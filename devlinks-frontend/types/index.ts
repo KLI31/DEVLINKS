@@ -63,6 +63,8 @@ export interface PublicProfile {
     title: string;
     url: string;
     icon: string | null;
+    previewImage: string | null;
+    isPrimary: boolean;
     displayOrder: number;
   }[];
   projects: Project[];
@@ -73,6 +75,8 @@ export interface LinkItem {
   title: string;
   url: string;
   icon: string | null;
+  previewImage: string | null;
+  isPrimary: boolean;
   displayOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -83,12 +87,16 @@ export interface CreateLinkPayload {
   title: string;
   url: string;
   icon?: string;
+  previewImage?: string;
+  isPrimary?: boolean;
 }
 
 export interface UpdateLinkPayload {
   title?: string;
   url?: string;
   icon?: string;
+  previewImage?: string;
+  isPrimary?: boolean;
   isActive?: boolean;
 }
 

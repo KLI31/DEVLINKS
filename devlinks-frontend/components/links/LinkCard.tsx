@@ -128,7 +128,16 @@ export function LinkCard({ link, index, onEdit }: LinkCardProps) {
       <div className="flex items-center justify-between border-t border-border/40 pt-3">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/40">
-            {link.icon ? (
+            {link.previewImage ? (
+              <Image
+                src={link.previewImage}
+                alt={link.title}
+                width={32}
+                height={32}
+                className="size-8 rounded-[6px] object-cover"
+                unoptimized
+              />
+            ) : link.icon ? (
               <Image
                 src={iconUrl(link.icon)}
                 alt={link.title}
@@ -141,6 +150,11 @@ export function LinkCard({ link, index, onEdit }: LinkCardProps) {
               <Link2 className="size-[18px] text-muted-foreground" />
             )}
           </div>
+          {link.isPrimary && (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              Principal
+            </span>
+          )}
           <span
             className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",

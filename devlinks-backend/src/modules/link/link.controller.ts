@@ -7,9 +7,11 @@ import {
   Body,
   Param,
   Req,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { LinkService } from './link.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -21,6 +23,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
+import * as cheerio from 'cheerio';
 
 @Controller('links')
 @UseGuards(JwtAuthGuard)
@@ -34,6 +37,42 @@ export class LinkController {
   @Get()
   findAll(@CurrentUser() user: JwtValidatedUser) {
     return this.linkService.findAll(user.userId);
+  }
+
+  /** Obtener preview Open Graph de una URL */
+  @Get('preview')
+  async getPreview(@Query('url') url: string) {
+    if (!url || !url.startsWith('http')) {
+      throw new BadRequestException({ error: 'Failed to fetch' });
+    }
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'Twitterbot/1.0' },
+      });
+
+      if (!response.ok) {
+        throw new BadRequestException({ error: 'Failed to fetch' });
+      }
+
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      const getMeta = (property: string) =>
+        $(`meta[property="${property}"]`).attr('content') ||
+        $(`meta[name="${property}"]`).attr('content') ||
+        undefined;
+
+      const title =
+        getMeta('og:title') || $('title').first().text() || undefined;
+      const description = getMeta('og:description') || undefined;
+      const image = getMeta('og:image') || undefined;
+      const siteName = getMeta('og:site_name') || undefined;
+
+      return { title, description, image, siteName };
+    } catch {
+      throw new BadRequestException({ error: 'Failed to fetch' });
+    }
   }
 
   /** Crear nuevo link */

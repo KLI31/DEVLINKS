@@ -42,16 +42,18 @@ model User {
 }
 
 model Link {
-  id           String   @id @default(uuid())
-  userId       String   @map("user_id")
-  title        String
-  url          String
-  icon         String?
-  displayOrder Int      @default(0) @map("display_order")
-  isActive     Boolean  @default(true) @map("is_active")
-  clicksCount  Int      @default(0) @map("clicks_count")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  title         String
+  url           String
+  icon          String?
+  previewImage  String?  @map("preview_image")
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  displayOrder  Int      @default(0) @map("display_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  clicksCount   Int      @default(0) @map("clicks_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   analytics LinkAnalytic[]
