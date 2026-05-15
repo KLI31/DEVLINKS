@@ -69,17 +69,4 @@ export type PublicProject = {
   displayOrder: number;
 };
 
-export type UpdateProfilePayload = {
-  displayName?: string;
-  username?: string;
-  bio?: string;
-  avatarUrl?: string;
-  theme?: string;
-  accentColor?: string;
-  buttonStyle?: string;
-  fontFamily?: string;
-  bgType?: string;
-  bgColor?: string;
-  profileLayout?: string;
-  coverImageUrl?: string;
-};
+export type { UpdateProfilePayload } from "@/types";

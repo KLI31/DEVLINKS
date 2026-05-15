@@ -8,7 +8,7 @@ export const linkSchema = z.object({
   url: z.string().url("Introduce una URL válida").max(2048),
   icon: z.string().max(100).optional(),
   previewImage: z.string().max(2048).optional(),
-  isPrimary: z.boolean().optional().default(false),
+  isPrimary: z.boolean().default(false),
 });
 
 export type LinkFormValues = z.infer<typeof linkSchema>;

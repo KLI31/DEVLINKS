@@ -18,6 +18,51 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Build JSON-LD structured data with hardcoded/validated values only.
+ * No user input is ever interpolated here, preventing XSS via script injection.
+ */
+function buildStructuredData(): string {
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "Nova 11 Labs",
+        url: "https://devlinks.nova11labs.dev",
+        logo: "https://devlinks.nova11labs.dev/logo.svg",
+        sameAs: ["https://github.com/nova11labs"],
+      },
+      {
+        "@type": "WebSite",
+        name: "DevLinks",
+        url: "https://devlinks.nova11labs.dev",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: "https://devlinks.nova11labs.dev/u/{search_term_string}",
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://devlinks.nova11labs.dev/#webpage",
+        url: "https://devlinks.nova11labs.dev",
+        name: "DevLinks — Hub de links para developers",
+        description:
+          "Centraliza todos tus links de developer en un solo lugar. Integración nativa con GitHub, analíticas por link, QR codes y themes personalizados. Gratis para siempre.",
+        isPartOf: {
+          "@id": "https://devlinks.nova11labs.dev/#website",
+        },
+        about: {
+          "@id": "https://devlinks.nova11labs.dev/#organization",
+        },
+        inLanguage: "es-ES",
+      },
+    ],
+  };
+  return JSON.stringify(data);
+}
+
 export default function Home() {
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -54,46 +99,7 @@ export default function Home() {
       <ScrollToTopButton />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@graph": [
-              {
-                "@type": "Organization",
-                name: "Nova 11 Labs",
-                url: "https://devlinks.nova11labs.dev",
-                logo: "https://devlinks.nova11labs.dev/logo.svg",
-                sameAs: ["https://github.com/nova11labs"],
-              },
-              {
-                "@type": "WebSite",
-                name: "DevLinks",
-                url: "https://devlinks.nova11labs.dev",
-                potentialAction: {
-                  "@type": "SearchAction",
-                  target:
-                    "https://devlinks.nova11labs.dev/u/{search_term_string}",
-                  "query-input": "required name=search_term_string",
-                },
-              },
-              {
-                "@type": "WebPage",
-                "@id": "https://devlinks.nova11labs.dev/#webpage",
-                url: "https://devlinks.nova11labs.dev",
-                name: "DevLinks — Hub de links para developers",
-                description:
-                  "Centraliza todos tus links de developer en un solo lugar. Integración nativa con GitHub, analíticas por link, QR codes y themes personalizados. Gratis para siempre.",
-                isPartOf: {
-                  "@id": "https://devlinks.nova11labs.dev/#website",
-                },
-                about: {
-                  "@id": "https://devlinks.nova11labs.dev/#organization",
-                },
-                inLanguage: "es-ES",
-              },
-            ],
-          }),
-        }}
+        dangerouslySetInnerHTML={{ __html: buildStructuredData() }}
       />
     </div>
   );

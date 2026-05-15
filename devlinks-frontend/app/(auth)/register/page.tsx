@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Suspense, useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -318,9 +319,9 @@ function RegisterPageContent() {
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           ¿Ya tienes cuenta?{" "}
-          <a href="/login" className="text-primary hover:underline">
+          <Link href="/login" className="text-primary hover:underline">
             Inicia sesión
-          </a>
+          </Link>
         </p>
       </div>
     </motion.div>
@@ -329,7 +330,13 @@ function RegisterPageContent() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
       <RegisterPageContent />
     </Suspense>
   );

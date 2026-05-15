@@ -104,6 +104,9 @@ export async function apiCall<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const method = options.method || "GET";
-  const body = options.body ? JSON.parse(options.body as string) : undefined;
+  const body =
+    options.body && typeof options.body === "string"
+      ? JSON.parse(options.body)
+      : undefined;
   return request<T>(method, url, body, options);
 }

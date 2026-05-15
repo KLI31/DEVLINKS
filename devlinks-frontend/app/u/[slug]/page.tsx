@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { userApi } from "@/lib/api/user.api";
 import { githubApi } from "@/lib/api/github.api";
@@ -8,9 +9,16 @@ interface PublicProfilePageProps {
   params: Promise<{ slug: string }>;
 }
 
+const isValidHex = (color: string | undefined) =>
+  typeof color === "string" && /^#[0-9A-Fa-f]{6}$/.test(color);
+
+const getCachedPublicProfile = cache((slug: string) =>
+  userApi.getPublicProfile(slug).catch(() => null),
+);
+
 export async function generateMetadata({ params }: PublicProfilePageProps) {
   const { slug } = await params;
-  const profile = await userApi.getPublicProfile(slug).catch(() => null);
+  const profile = await getCachedPublicProfile(slug);
 
   return {
     title: profile?.displayName ?? slug,
@@ -26,7 +34,7 @@ export default async function PublicProfilePage({
 }: PublicProfilePageProps) {
   const { slug } = await params;
 
-  const profile = await userApi.getPublicProfile(slug).catch(() => null);
+  const profile = await getCachedPublicProfile(slug);
   if (!profile) notFound();
 
   const [projects, githubStats] = await Promise.all([
@@ -36,10 +44,15 @@ export default async function PublicProfilePage({
       : Promise.resolve(null as GithubStats | null),
   ]);
 
+  const safeBgColor = isValidHex(profile.bgColor) ? profile.bgColor : "#0f172a";
+  const safeAccentColor = isValidHex(profile.accentColor)
+    ? profile.accentColor
+    : "#3b82f6";
+
   const pageBg =
     profile.bgType === "gradient"
-      ? `linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 85%, #000 15%) 0%, color-mix(in srgb, ${profile.bgColor} 60%, ${profile.accentColor} 40%) 100%)`
-      : profile.bgColor;
+      ? `linear-gradient(160deg, color-mix(in srgb, ${safeBgColor} 85%, #000 15%) 0%, color-mix(in srgb, ${safeBgColor} 60%, ${safeAccentColor} 40%) 100%)`
+      : safeBgColor;
 
   return (
     <main

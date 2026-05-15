@@ -163,13 +163,11 @@ export function AppearancePanel({
       )
     : FONT_FAMILIES;
 
-  const groupedFonts = filteredFonts.reduce<
-    Record<string, (typeof FONT_FAMILIES)[number][]>
-  >((acc, font) => {
-    if (!acc[font.tag]) acc[font.tag] = [];
-    acc[font.tag].push(font);
-    return acc;
-  }, {});
+  const groupedFonts: Record<string, (typeof FONT_FAMILIES)[number][]> = {};
+  for (const font of filteredFonts) {
+    if (!groupedFonts[font.tag]) groupedFonts[font.tag] = [];
+    groupedFonts[font.tag].push(font);
+  }
 
   return (
     <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">

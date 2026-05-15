@@ -47,7 +47,7 @@ export function LinkFormModal({
     getValues,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<LinkFormValues>({
+  } = useForm({
     resolver: zodResolver(linkSchema),
     defaultValues: {
       title: "",
@@ -226,7 +226,7 @@ export function LinkFormModal({
               </span>
             </div>
             <Switch
-              checked={isPrimaryValue}
+              checked={!!isPrimaryValue}
               onCheckedChange={(checked) =>
                 setValue("isPrimary", checked, { shouldDirty: true })
               }

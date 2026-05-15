@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -45,7 +46,9 @@ export default function LoginPage() {
       await login(data);
       toast.success("¡Bienvenido de vuelta!");
       router.push("/dashboard");
-    } catch {}
+    } catch (err) {
+      console.error("Login failed:", err);
+    }
   };
 
   const handleGithubLogin = () => {
@@ -142,12 +145,12 @@ export default function LoginPage() {
                 >
                   Contraseña
                 </label>
-                <a
+                <Link
                   href="/forgot-password"
                   className="text-xs text-primary hover:underline"
                 >
                   ¿Olvidaste tu contraseña?
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Input
@@ -194,9 +197,9 @@ export default function LoginPage() {
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           ¿No tienes cuenta?{" "}
-          <a href="/register" className="text-primary hover:underline">
+          <Link href="/register" className="text-primary hover:underline">
             Crea una gratis
-          </a>
+          </Link>
         </p>
       </div>
     </motion.div>

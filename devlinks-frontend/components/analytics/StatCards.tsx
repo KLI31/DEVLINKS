@@ -2,10 +2,25 @@ import { MousePointer2, Eye, Globe, TrendingUp } from "lucide-react";
 import type { AnalyticsSummary } from "@/types/analytics";
 
 interface StatCardsProps {
-  summary: AnalyticsSummary;
+  summary: AnalyticsSummary | null;
 }
 
 export function StatCards({ summary }: StatCardsProps) {
+  if (!summary) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-border/60 bg-card p-4 pt-5 shadow-[var(--shadow-card)]"
+          >
+            <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+            <div className="mt-3 h-8 w-3/4 animate-pulse rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+    );
+  }
   const cards = [
     {
       label: "Total clics",

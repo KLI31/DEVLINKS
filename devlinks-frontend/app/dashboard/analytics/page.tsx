@@ -1,11 +1,9 @@
 import { analyticsApi, userApi } from "@/lib/api";
 import { StatCards } from "@/components/analytics/StatCards";
-import { ClicksAreaChart } from "@/components/analytics/ClicksAreaChart";
-import { ReferrersDonutChart } from "@/components/analytics/ReferrersDonutChart";
-import { ClicksWorldMap } from "@/components/analytics/ClicksWorldMap";
 import { LinksProgressList } from "@/components/analytics/LinksProgressList";
 import { DevicesBarChart } from "@/components/analytics/DevicesBarChart";
 import { RangeSelectorTabs } from "@/components/analytics/RangeSelectorTabs";
+import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 
 interface AnalyticsPageProps {
   searchParams?: Promise<{ days?: string }>;
@@ -23,18 +21,27 @@ export default async function AnalyticsPage({
   const params = await searchParams;
   const days = parseDays(params?.days);
 
-  const [user, summary, timeline, linksStats, countries, referrers, devices] =
-    await Promise.all([
-      userApi.me(),
-      analyticsApi.getSummary(days),
-      analyticsApi.getClicksTimeline(days),
-      analyticsApi.getLinksStats(days),
-      analyticsApi.getCountries(days),
-      analyticsApi.getReferrers(days),
-      analyticsApi.getDevices(days),
-    ]);
+  const user = await userApi.me().catch(() => null);
+  const accentColor = user?.accentColor || "var(--primary)";
 
-  const accentColor = user.accentColor || "var(--primary)";
+  const results = await Promise.allSettled([
+    analyticsApi.getSummary(days),
+    analyticsApi.getClicksTimeline(days),
+    analyticsApi.getLinksStats(days),
+    analyticsApi.getCountries(days),
+    analyticsApi.getReferrers(days),
+    analyticsApi.getDevices(days),
+  ]);
+
+  const [summaryRes, timelineRes, linksStatsRes, countriesRes, referrersRes, devicesRes] =
+    results;
+
+  const summary = summaryRes.status === "fulfilled" ? summaryRes.value : null;
+  const timeline = timelineRes.status === "fulfilled" ? timelineRes.value : [];
+  const linksStats = linksStatsRes.status === "fulfilled" ? linksStatsRes.value : [];
+  const countries = countriesRes.status === "fulfilled" ? countriesRes.value : [];
+  const referrers = referrersRes.status === "fulfilled" ? referrersRes.value : [];
+  const devices = devicesRes.status === "fulfilled" ? devicesRes.value : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,22 +50,15 @@ export default async function AnalyticsPage({
         <RangeSelectorTabs currentDays={days} />
       </div>
 
-      <StatCards summary={summary} accentColor={accentColor} />
+      <StatCards summary={summary} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ClicksAreaChart data={timeline} accentColor={accentColor} />
-        </div>
-        <div>
-          <ReferrersDonutChart
-            data={referrers}
-            accentColor={accentColor}
-            totalClicks={summary.totalClicks}
-          />
-        </div>
-      </div>
-
-      <ClicksWorldMap countries={countries} accentColor={accentColor} />
+      <AnalyticsCharts
+        timeline={timeline}
+        referrers={referrers}
+        countries={countries}
+        accentColor={accentColor}
+        totalClicks={summary?.totalClicks ?? 0}
+      />
 
       <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
         <div className="flex lg:col-span-2">
