@@ -12,8 +12,6 @@ export async function generateMetadata({ params }: PublicProfilePageProps) {
   const { slug } = await params;
   const profile = await userApi.getPublicProfile(slug).catch(() => null);
 
-  console.log(profile);
-
   return {
     title: profile?.displayName ?? slug,
     description: profile?.bio ?? `Perfil de ${slug} en DevLinks`,
