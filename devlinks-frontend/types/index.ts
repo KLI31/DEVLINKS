@@ -181,3 +181,43 @@ export interface GithubStats {
   totalContributions: number;
   fetchedAt: number;
 }
+
+export interface ProfileExportJson {
+  version: string;
+  profile: {
+    displayName: string;
+    bio: string | null;
+    location: string | null;
+    avatarUrl: string | null;
+    githubUsername: string | null;
+    theme: string;
+    accentColor: string;
+    buttonStyle: string;
+    fontFamily: string;
+    bgType: string;
+    bgColor: string;
+    profileLayout: string;
+    coverImageUrl: string;
+  };
+  links: {
+    title: string;
+    url: string;
+    icon: string | null;
+    previewImage: string | null;
+    isPrimary: boolean;
+    displayOrder: number;
+    isActive: boolean;
+  }[];
+  stickers: PlacedSticker[];
+  projects: {
+    title: string;
+    description: string | null;
+    url: string | null;
+    githubRepo: string | null;
+    stars: number;
+    language: string | null;
+    imageUrl: string | null;
+    pinned: boolean;
+    displayOrder: number;
+  }[];
+}

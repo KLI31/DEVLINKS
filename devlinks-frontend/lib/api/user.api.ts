@@ -1,5 +1,6 @@
 import { apiService } from "./api-service";
-import type { UserProfile, PublicProfile, UpdateProfilePayload, Project, PinnedRepoPayload, PlacedSticker } from "@/types";
+import type { UserProfile, PublicProfile, UpdateProfilePayload, Project, PinnedRepoPayload, PlacedSticker, ProfileExportJson } from "@/types";
+import type { ProfileImportJson } from "@/lib/validations/import-profile.schema";
 
 export interface GeoResult {
   city: string | null;
@@ -37,4 +38,10 @@ export const userApi = {
 
   updateStickers: (stickers: PlacedSticker[]) =>
     apiService.patch<void>("/user/me/stickers", { stickers }),
+
+  exportProfile: () =>
+    apiService.get<ProfileExportJson>("/user/me/export"),
+
+  importProfile: (data: ProfileImportJson) =>
+    apiService.post<void>("/user/me/import", data),
 };

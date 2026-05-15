@@ -18,6 +18,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { SetPinnedReposDto } from './dto/set-pinned-repos.dto';
 import { UpdateStickersDto } from './dto/update-stickers.dto';
+import { ImportProfileDto } from './dto/import-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -109,6 +110,22 @@ export class UserController {
     @Param('id') id: string,
   ) {
     return this.userService.removeProject(user.userId, id);
+  }
+
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  exportProfile(@CurrentUser() user: JwtValidatedUser) {
+    return this.userService.exportProfile(user.userId);
+  }
+
+  @Post('me/import')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  importProfile(
+    @CurrentUser() user: JwtValidatedUser,
+    @Body() dto: ImportProfileDto,
+  ) {
+    return this.userService.importProfile(user.userId, dto);
   }
 
   @Public()

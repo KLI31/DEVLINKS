@@ -11,7 +11,7 @@ import {
   Link2,
   BarChart3,
   Palette,
-  Upload,
+  FileJson,
   Settings,
   LogOut,
   type LucideIcon,
@@ -43,7 +43,7 @@ const navItems: IconEntry[] = [
     href: "/dashboard/customize",
     label: "Personalización",
   },
-  { id: "import", icon: Upload, href: "/dashboard/import", label: "Importar" },
+  { id: "import", icon: FileJson, href: "/dashboard/import", label: "Importar / Exportar" },
   {
     id: "settings",
     icon: Settings,
