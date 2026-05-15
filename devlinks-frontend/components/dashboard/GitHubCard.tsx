@@ -179,8 +179,13 @@ export function GitHubCard() {
     );
   }
 
+  // Deduplicate projects by id to prevent rendering duplicates
+  const uniqueSavedProjects = Array.from(
+    new Map(savedProjects.map((p) => [p.id, p])).values(),
+  );
+
   const topLanguages = stats.topLanguages.slice(0, 3);
-  const displayRepos = savedProjects.length > 0
+  const displayRepos = uniqueSavedProjects.length > 0
     ? null
     : stats.topRepos.slice(0, 3);
 
@@ -255,13 +260,13 @@ export function GitHubCard() {
         </div>
       )}
 
-      {(savedProjects.length > 0 || (displayRepos && displayRepos.length > 0)) && (
+      {(uniqueSavedProjects.length > 0 || (displayRepos && displayRepos.length > 0)) && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
             <h4 className="text-xs font-medium text-foreground">
-              {savedProjects.length > 0 ? "Repos destacados" : "Top repos"}
+              {uniqueSavedProjects.length > 0 ? "Repos destacados" : "Top repos"}
             </h4>
-            {savedProjects.length === 0 && (
+            {uniqueSavedProjects.length === 0 && (
               <span
                 className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground"
                 title="Selecciona tus repos en Personalización"
@@ -271,8 +276,8 @@ export function GitHubCard() {
               </span>
             )}
           </div>
-          {savedProjects.length > 0
-            ? savedProjects.map((project) => (
+          {uniqueSavedProjects.length > 0
+            ? uniqueSavedProjects.map((project) => (
                 <a
                   key={project.id}
                   href={project.url ?? undefined}

@@ -253,10 +253,7 @@ export function useImportState({
     try {
       await userApi.importProfile(importPayload);
       toast.success("Configuración importada correctamente.");
-      setTimeout(() => {
-        router.push("/dashboard");
-        router.refresh();
-      }, 1500);
+      router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al importar";
       toast.error(message);
