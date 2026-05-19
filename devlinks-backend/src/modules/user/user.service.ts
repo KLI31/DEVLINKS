@@ -38,7 +38,7 @@ export type UserPublic = {
 };
 
 export type UserProfile = Omit<UserPublic, 'email'> & {
-  links: Pick<Link, 'id' | 'title' | 'url' | 'icon' | 'previewImage' | 'isPrimary' | 'displayOrder'>[];
+  links: Pick<Link, 'id' | 'title' | 'url' | 'icon' | 'previewImage' | 'isPrimary' | 'layout' | 'displayOrder'>[];
 };
 
 @Injectable()
@@ -146,6 +146,7 @@ export class UserService {
             icon: true,
             previewImage: true,
             isPrimary: true,
+            layout: true,
             displayOrder: true,
           },
         },
@@ -342,6 +343,7 @@ export class UserService {
         icon: link.icon,
         previewImage: link.previewImage,
         isPrimary: link.isPrimary,
+        layout: link.layout,
         displayOrder: link.displayOrder,
         isActive: link.isActive,
       })),
@@ -393,6 +395,7 @@ export class UserService {
               icon: l.icon ?? null,
               previewImage: l.previewImage ?? null,
               isPrimary: l.isPrimary ?? false,
+              layout: l.layout ?? 'classic',
               displayOrder: l.displayOrder ?? i,
               isActive: l.isActive ?? true,
             })),
@@ -408,7 +411,7 @@ export class UserService {
       }
 
       if (dto.projects) {
-        await tx.project.deleteMany({ where: { userId, githubRepo: null } });
+        await tx.project.deleteMany({ where: { userId } });
         if (dto.projects.length > 0) {
           await tx.project.createMany({
             data: dto.projects.map((p, i) => ({

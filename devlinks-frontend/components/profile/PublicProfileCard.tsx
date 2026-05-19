@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import {
   MapPin,
@@ -12,7 +12,11 @@ import {
   Code2,
   Users,
   UserCheck,
+  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type {
   PublicProfile,
@@ -23,6 +27,8 @@ import type {
 import { iconUrl } from "@/lib/icons";
 import { getDevIconUrl } from "@/lib/api/github.api";
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
+import { getProfileUrl } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const BUTTON_RADIUS: Record<string, string> = {
   "rounded-fill": "8px",
@@ -97,12 +103,14 @@ interface PublicProfileCardProps {
   profile: PublicProfile;
   projects: Project[];
   githubStats?: GithubStats | null;
+  hideShare?: boolean;
 }
 
 export function PublicProfileCard({
   profile,
   projects,
   githubStats,
+  hideShare = false,
 }: PublicProfileCardProps) {
   const coverRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
@@ -110,6 +118,21 @@ export function PublicProfileCard({
   const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
   const coverBlurPx = useTransform(scrollY, [0, 300], [0, 10]);
   const coverBlurFilter = useTransform(coverBlurPx, (v) => `blur(${v}px)`);
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const publicUrl = getProfileUrl(profile.username);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      toast.success("Link copiado al portapapeles");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Error al copiar el link");
+    }
+  };
 
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
   const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
@@ -170,10 +193,30 @@ export function PublicProfileCard({
     githubStats?.topRepos.reduce((s, r) => s + r.stargazers_count, 0) ?? 0;
   const statsItems = githubStats
     ? [
-        { label: "Repositorios", value: formatCount(githubStats.totalRepos), Icon: Code2, iconColor: "#22d3ee" },
-        { label: "Seguidores", value: formatCount(githubStats.followers), Icon: Users, iconColor: "#4ade80" },
-        { label: "Siguiendo", value: formatCount(githubStats.user.following), Icon: UserCheck, iconColor: "#60a5fa" },
-        { label: "Stars recibidas", value: formatCount(totalStars), Icon: Star, iconColor: "#facc15" },
+        {
+          label: "Repositorios",
+          value: formatCount(githubStats.totalRepos),
+          Icon: Code2,
+          iconColor: "#22d3ee",
+        },
+        {
+          label: "Seguidores",
+          value: formatCount(githubStats.followers),
+          Icon: Users,
+          iconColor: "#4ade80",
+        },
+        {
+          label: "Siguiendo",
+          value: formatCount(githubStats.user.following),
+          Icon: UserCheck,
+          iconColor: "#60a5fa",
+        },
+        {
+          label: "Stars recibidas",
+          value: formatCount(totalStars),
+          Icon: Star,
+          iconColor: "#facc15",
+        },
       ]
     : [];
 
@@ -197,15 +240,30 @@ export function PublicProfileCard({
           "0 12px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.03)",
       }}
     >
+      {!hideShare && (
+        <button
+          type="button"
+          onClick={() => setShareOpen(true)}
+          className="absolute top-4 right-4 z-30 flex size-10 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95"
+          style={{
+            background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.10)",
+            color: textPrimary,
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+          }}
+          aria-label="Compartir perfil"
+        >
+          <Share2 className="size-5" />
+        </button>
+      )}
+
       <div
         ref={coverRef}
         className="relative w-full overflow-hidden rounded-t-[30px]"
         style={{ height: 400 }}
       >
-        {/* 1. Fondo sólido — siempre visible debajo de todo */}
         <div className="absolute inset-0" style={{ background: cardBg }} />
 
-        {/* 2. Imagen de cover — visible arriba, se desvanece hacia abajo + scroll fade */}
         <motion.div
           className="absolute inset-0"
           style={{
@@ -213,8 +271,7 @@ export function PublicProfileCard({
             opacity: coverOpacity,
             scale: coverScale,
             filter: coverBlurFilter,
-            // Mask lineal: imagen 100% visible arriba, desaparece suavemente hacia abajo
-            // Esto integra la foto con el cardBg que está debajo
+
             WebkitMaskImage: `linear-gradient(to bottom,
               #000 0%,
               #000 45%,
@@ -238,7 +295,6 @@ export function PublicProfileCard({
           }}
         />
 
-        {/* 3. Gradiente lateral izquierda/derecha (encima de la imagen) */}
         <div
           className="absolute inset-0"
           style={{
@@ -292,7 +348,10 @@ export function PublicProfileCard({
         )}
       </div>
 
-      <div className="px-6 pb-8 pt-0 rounded-b-[30px]" style={{ background: cardBg }}>
+      <div
+        className="px-6 pb-8 pt-0 rounded-b-[30px]"
+        style={{ background: cardBg }}
+      >
         <div
           className="relative z-10 flex flex-col items-center pb-5 pt-0"
           style={{ marginTop: "-36px" }}
@@ -358,32 +417,16 @@ export function PublicProfileCard({
               devlinks.io/{profile.username}
             </span>
 
-            <span className="text-white max-w-sm text-center text-sm">
+            <span
+              className="max-w-sm text-center text-sm font-semibold"
+              style={{ color: textMuted }}
+            >
               {profile.bio}
             </span>
           </div>
 
           {primaryLinks.length > 0 && (
             <div className="mt-3 flex flex-wrap justify-center gap-3">
-              {/*{socialLinks.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={link.title}
-                    className="flex size-10 shrink-0 items-center justify-center transition-opacity hover:opacity-75"
-                  >
-                    <Image
-                      src={iconUrl(link.icon!, profile.accentColor)}
-                      alt={link.title}
-                      width={32}
-                      height={32}
-                      unoptimized
-                      className="size-6 object-contain"
-                    />
-                  </a>
-                ))}*/}
               {primaryLinks.map((link) => (
                 <a
                   key={link.id}
@@ -396,11 +439,10 @@ export function PublicProfileCard({
                   <Image
                     src={iconUrl(link.icon ?? "link", profile.accentColor)}
                     alt={link.title}
-                    width={32}
-                    height={32}
+                    width={50}
+                    height={50}
                     unoptimized
-                    className="size-6 object-contain"
-                    style={{ filter: `drop-shadow(0 0 3px ${profile.accentColor}70)` }}
+                    className="size-7 object-contain"
                   />
                 </a>
               ))}
@@ -425,7 +467,6 @@ export function PublicProfileCard({
                     className="flex items-center justify-center rounded-lg p-1.5"
                     style={{
                       background: `${iconColor}18`,
-                      boxShadow: `0 0 12px ${iconColor}30`,
                     }}
                   >
                     <Icon className="size-4" style={{ color: iconColor }} />
@@ -497,7 +538,9 @@ export function PublicProfileCard({
               ))}
             </div>
             <div className="mt-2 flex items-center justify-end gap-1.5">
-              <span className="text-[8px]" style={{ color: textMuted }}>Menos</span>
+              <span className="text-[8px]" style={{ color: textMuted }}>
+                Menos
+              </span>
               {["0a", ...HEATMAP_ALPHA].map((alpha) => (
                 <div
                   key={alpha}
@@ -509,7 +552,9 @@ export function PublicProfileCard({
                   }}
                 />
               ))}
-              <span className="text-[8px]" style={{ color: textMuted }}>Más</span>
+              <span className="text-[8px]" style={{ color: textMuted }}>
+                Más
+              </span>
             </div>
           </>
         )}
@@ -534,7 +579,11 @@ export function PublicProfileCard({
                   style={repoStyle}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: i * 0.05, ease: "easeOut" }}
+                  transition={{
+                    duration: 0.2,
+                    delay: i * 0.05,
+                    ease: "easeOut",
+                  }}
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                 >
@@ -542,7 +591,12 @@ export function PublicProfileCard({
                     <div className="flex items-start justify-between gap-1 mb-1.5">
                       <p
                         className="text-[11px] font-bold leading-tight break-all line-clamp-2"
-                        style={{ color: PROJECT_TITLE_COLORS[i % PROJECT_TITLE_COLORS.length] }}
+                        style={{
+                          color:
+                            PROJECT_TITLE_COLORS[
+                              i % PROJECT_TITLE_COLORS.length
+                            ],
+                        }}
                       >
                         {project.title || project.githubRepo}
                       </p>
@@ -571,7 +625,8 @@ export function PublicProfileCard({
                           className="block size-1.5 rounded-full shrink-0"
                           style={{
                             background:
-                              LANG_COLOR[project.language] ?? profile.accentColor,
+                              LANG_COLOR[project.language] ??
+                              profile.accentColor,
                           }}
                         />
                         {project.language}
@@ -607,81 +662,93 @@ export function PublicProfileCard({
               Links
             </p>
             <div className="flex flex-col gap-2">
-              {secondaryLinks.map((link, i) => (
-                <motion.a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "flex w-full overflow-hidden",
-                    link.previewImage
-                      ? "flex-col"
-                      : "min-h-[52px] items-center gap-3 px-4 py-3",
-                  )}
-                  style={{
-                    borderRadius: buttonRadius,
-                    ...(link.previewImage
-                      ? {
-                          border: `1px solid ${profile.accentColor}35`,
-                          background: `${profile.accentColor}08`,
-                          boxShadow: `0 4px 24px rgba(0,0,0,0.35), 0 1px 6px rgba(0,0,0,0.2), 0 0 0 1px ${profile.accentColor}15`,
-                        }
-                      : linkStyle),
-                  }}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.2,
-                    delay: i * 0.05,
-                    ease: "easeOut",
-                  }}
-                  whileHover={{ y: -2, scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {link.previewImage && (
-                    <Image
-                      src={link.previewImage}
-                      alt={link.title}
-                      width={480}
-                      height={120}
-                      className="h-[120px] w-full object-cover"
-                      style={{
-                        borderTopLeftRadius: buttonRadius,
-                        borderTopRightRadius: buttonRadius,
-                      }}
-                      unoptimized
-                    />
-                  )}
-                  <div
+              {secondaryLinks.map((link, i) => {
+                const isFeatured =
+                  link.layout === "featured" && link.previewImage;
+                return (
+                  <motion.a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={cn(
-                      "flex items-center gap-3",
-                      link.previewImage && "px-4 py-3",
+                      "flex w-full overflow-hidden",
+                      isFeatured
+                        ? "flex-col"
+                        : "min-h-[52px] items-center gap-3 px-4 py-3",
                     )}
+                    style={{
+                      borderRadius: buttonRadius,
+                      ...(isFeatured
+                        ? {
+                            border: `1px solid ${profile.accentColor}35`,
+                            background: `${profile.accentColor}08`,
+                          }
+                        : linkStyle),
+                    }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.2,
+                      delay: i * 0.05,
+                      ease: "easeOut",
+                    }}
+                    whileHover={{ y: -2, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    {link.icon && (
+                    {isFeatured && (
                       <Image
-                        src={iconUrl(link.icon, profile.accentColor)}
-                        alt={link.icon}
-                        width={16}
-                        height={16}
+                        src={link.previewImage!}
+                        alt={link.title}
+                        width={480}
+                        height={120}
+                        className="h-[120px] w-full object-cover"
+                        style={{
+                          borderTopLeftRadius: buttonRadius,
+                          borderTopRightRadius: buttonRadius,
+                        }}
                         unoptimized
-                        className="size-4 shrink-0 object-contain"
                       />
                     )}
-                    <span
-                      className="flex-1 truncate text-[12px] font-medium"
-                      style={{ color: textPrimary }}
+                    <div
+                      className={cn(
+                        "flex items-center gap-3",
+                        isFeatured && "px-4 py-3",
+                      )}
                     >
-                      {link.title}
-                    </span>
-                    <ChevronRight
-                      className="size-4 shrink-0"
-                      style={{ color: textMuted }}
-                    />
-                  </div>
-                </motion.a>
-              ))}
+                      {!isFeatured && link.previewImage ? (
+                        <Image
+                          src={link.previewImage}
+                          alt={link.title}
+                          width={40}
+                          height={40}
+                          unoptimized
+                          className="size-10 shrink-0 rounded-md object-cover"
+                        />
+                      ) : link.icon ? (
+                        <Image
+                          src={iconUrl(link.icon, profile.accentColor)}
+                          alt={link.icon}
+                          width={16}
+                          height={16}
+                          unoptimized
+                          className="size-4 shrink-0 object-contain"
+                        />
+                      ) : null}
+                      <span
+                        className="flex-1 break-words text-center text-[12px] font-medium leading-snug"
+                        style={{ color: textPrimary }}
+                      >
+                        {link.title}
+                      </span>
+                      <ChevronRight
+                        className="size-4 shrink-0"
+                        style={{ color: textMuted }}
+                      />
+                    </div>
+                  </motion.a>
+                );
+              })}
             </div>
           </>
         )}
@@ -703,6 +770,91 @@ export function PublicProfileCard({
           </span>
         </div>
       </div>
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="gap-6 sm:max-w-sm">
+          <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
+
+          <div className="flex flex-col items-center gap-5">
+            <p className="text-base font-semibold text-foreground">
+              Compartir perfil
+            </p>
+
+            <div
+              className="flex w-full flex-col items-center gap-4 rounded-[24px] p-8"
+              style={{
+                background: cardBg,
+                border: `1px solid ${profile.accentColor}20`,
+              }}
+            >
+              <div
+                className="size-[88px] overflow-hidden rounded-full"
+                style={{
+                  background: profile.avatarUrl
+                    ? "transparent"
+                    : `${profile.accentColor}25`,
+                  boxShadow: `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}80, 0 6px 28px ${profile.accentColor}55`,
+                }}
+              >
+                {profile.avatarUrl ? (
+                  <Image
+                    src={profile.avatarUrl}
+                    alt={profile.displayName}
+                    width={88}
+                    height={88}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center">
+                    <span
+                      className="text-lg font-bold"
+                      style={{ color: textPrimary }}
+                    >
+                      {profile.displayName.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col items-center gap-1">
+                <span
+                  className="text-lg font-bold"
+                  style={{ color: textPrimary }}
+                >
+                  {profile.displayName}
+                </span>
+                <span
+                  className="flex items-center gap-1 text-sm"
+                  style={{ color: `${profile.accentColor}cc` }}
+                >
+                  <Image
+                    src="/logo.svg"
+                    alt="DevLinks"
+                    width={14}
+                    height={14}
+                    className="inline-block"
+                  />
+                  /{profile.username}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: profile.accentColor }}
+            >
+              {copied ? (
+                <Check className="size-4" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+              {copied ? "Link copiado" : "Copiar link"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,6 +9,7 @@ export const linkSchema = z.object({
   icon: z.string().max(100).optional(),
   previewImage: z.string().max(2048).optional(),
   isPrimary: z.boolean().default(false),
+  layout: z.enum(["classic", "featured"]).default("classic"),
 });
 
 export type LinkFormValues = z.infer<typeof linkSchema>;

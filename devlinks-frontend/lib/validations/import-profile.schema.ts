@@ -61,6 +61,7 @@ export const importProfileSchema = z.object({
         isPrimary: z.boolean().default(false),
         displayOrder: z.number().int().min(0).default(0),
         isActive: z.boolean().default(true),
+        layout: z.enum(["classic", "featured"]).default("classic"),
       }),
     )
     .optional(),

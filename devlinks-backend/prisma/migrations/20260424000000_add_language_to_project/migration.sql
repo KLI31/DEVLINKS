@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "projects" ADD COLUMN "language" TEXT;
+ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "language" TEXT;

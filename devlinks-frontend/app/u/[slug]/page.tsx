@@ -1,8 +1,10 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { userApi } from "@/lib/api/user.api";
 import { githubApi } from "@/lib/api/github.api";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
+import { getProfileUrl } from "@/lib/utils";
 import type { Project, GithubStats } from "@/types";
 
 interface PublicProfilePageProps {
@@ -16,14 +18,41 @@ const getCachedPublicProfile = cache((slug: string) =>
   userApi.getPublicProfile(slug).catch(() => null),
 );
 
-export async function generateMetadata({ params }: PublicProfilePageProps) {
+export async function generateMetadata({
+  params,
+}: PublicProfilePageProps): Promise<Metadata> {
   const { slug } = await params;
   const profile = await getCachedPublicProfile(slug);
 
+  const title = profile?.displayName
+    ? `${profile.displayName} (@${profile.username})`
+    : slug;
+  const description = profile?.bio ?? `Perfil de ${slug} en DevLinks`;
+  const url = getProfileUrl(slug);
+
   return {
-    title: profile?.displayName ?? slug,
-    description: profile?.bio ?? `Perfil de ${slug} en DevLinks`,
+    title,
+    description,
     openGraph: {
+      title,
+      description,
+      url,
+      type: "profile",
+      images: profile?.avatarUrl
+        ? [
+            {
+              url: profile.avatarUrl,
+              width: 400,
+              height: 400,
+              alt: `Avatar de ${profile.displayName ?? slug}`,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
       images: profile?.avatarUrl ? [profile.avatarUrl] : [],
     },
   };

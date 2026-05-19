@@ -3,6 +3,7 @@ import {
   IsUrl,
   IsOptional,
   IsBoolean,
+  IsIn,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -33,4 +34,8 @@ export class CreateLinkDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean;
+
+  @IsOptional()
+  @IsIn(['classic', 'featured'])
+  layout?: 'classic' | 'featured';
 }

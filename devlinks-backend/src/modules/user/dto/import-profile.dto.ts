@@ -147,6 +147,10 @@ class ImportLinkDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsIn(['classic', 'featured'])
+  layout?: 'classic' | 'featured';
 }
 
 class ImportStickerDto {

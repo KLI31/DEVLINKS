@@ -5,6 +5,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --json-key-color: #e2e8f0;
+  --json-string-color: #86efac;
+  --json-number-color: #c4b5fd;
+  --json-boolean-color: #93c5fd;
+
   --color-primary: #0d9488;
   --color-primary-light: #ccfbf1;
   --color-primary-dark: #0f766e;
@@ -195,6 +200,11 @@
 }
 
 .light {
+  --json-key-color: #0f172a;
+  --json-string-color: #166534;
+  --json-number-color: #6d28d9;
+  --json-boolean-color: #1d4ed8;
+
   --color-surface: #f8fafc;
   --color-surface-2: #f1f5f9;
   --color-surface-3: #e2e8f0;
@@ -413,4 +423,26 @@
   .shiny-border::after {
     display: none;
   }
+}
+
+.w-tc-editor code[class*='language-json'] .token.property,
+.w-tc-editor pre[class*='language-json'] .token.property {
+  color: var(--json-key-color) !important;
+}
+
+.w-tc-editor code[class*='language-json'] .token.string,
+.w-tc-editor pre[class*='language-json'] .token.string {
+  color: var(--json-string-color) !important;
+}
+
+.w-tc-editor code[class*='language-json'] .token.number,
+.w-tc-editor pre[class*='language-json'] .token.number {
+  color: var(--json-number-color) !important;
+}
+
+.w-tc-editor code[class*='language-json'] .token.boolean,
+.w-tc-editor pre[class*='language-json'] .token.boolean,
+.w-tc-editor code[class*='language-json'] .token.null,
+.w-tc-editor pre[class*='language-json'] .token.null {
+  color: var(--json-boolean-color) !important;
 }

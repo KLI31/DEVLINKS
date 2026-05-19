@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 
 import { ThemeProvider } from "./providers/theme-provider";
 import { AuthProvider } from "./providers/auth-provider";
+import "@uiw/react-textarea-code-editor/dist.css";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({

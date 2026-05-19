@@ -39,6 +39,7 @@ const EXAMPLE_JSON: ProfileExportJson = {
       isPrimary: true,
       displayOrder: 0,
       isActive: true,
+      layout: "classic",
     },
     {
       title: "Twitter / X",
@@ -48,6 +49,7 @@ const EXAMPLE_JSON: ProfileExportJson = {
       isPrimary: false,
       displayOrder: 1,
       isActive: true,
+      layout: "classic",
     },
   ],
   stickers: [
@@ -299,6 +301,7 @@ export function useImportState({
             previewImage: link.previewImage ?? null,
             isPrimary: link.isPrimary ?? false,
             displayOrder: link.displayOrder ?? i,
+            layout: link.layout ?? "classic",
           }))
         : base.links.map((link, i) => ({
             id: `current-link-${i}`,
@@ -308,6 +311,7 @@ export function useImportState({
             previewImage: link.previewImage ?? null,
             isPrimary: link.isPrimary,
             displayOrder: link.displayOrder,
+            layout: link.layout ?? "classic",
           }));
 
     const stickers =

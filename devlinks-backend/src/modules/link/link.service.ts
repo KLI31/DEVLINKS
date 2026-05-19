@@ -19,6 +19,7 @@ export type LinkPublic = Pick<
   | 'icon'
   | 'previewImage'
   | 'isPrimary'
+  | 'layout'
   | 'displayOrder'
   | 'isActive'
   | 'createdAt'
@@ -41,6 +42,7 @@ export class LinkService {
         icon: true,
         previewImage: true,
         isPrimary: true,
+        layout: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -66,6 +68,7 @@ export class LinkService {
         icon: dto.icon ?? null,
         previewImage: dto.previewImage ?? null,
         isPrimary: dto.isPrimary ?? false,
+        layout: dto.layout ?? 'classic',
         displayOrder,
       },
       select: {
@@ -76,6 +79,7 @@ export class LinkService {
         icon: true,
         previewImage: true,
         isPrimary: true,
+        layout: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -100,6 +104,7 @@ export class LinkService {
         ...(dto.previewImage !== undefined && { previewImage: dto.previewImage }),
         ...(dto.isPrimary !== undefined && { isPrimary: dto.isPrimary }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.layout !== undefined && { layout: dto.layout }),
       },
       select: {
         id: true,
@@ -109,6 +114,7 @@ export class LinkService {
         icon: true,
         previewImage: true,
         isPrimary: true,
+        layout: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -166,6 +172,7 @@ export class LinkService {
         icon: true,
         previewImage: true,
         isPrimary: true,
+        layout: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,
@@ -185,6 +192,7 @@ export class LinkService {
         icon: true,
         previewImage: true,
         isPrimary: true,
+        layout: true,
         displayOrder: true,
         isActive: true,
         createdAt: true,

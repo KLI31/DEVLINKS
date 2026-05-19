@@ -13,24 +13,19 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
+  verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
 import { AnimatePresence, motion } from "motion/react";
 import { Link2 } from "lucide-react";
-import type { LinkItem } from "@/types";
 import { linksApi } from "@/lib/api";
 import { resolveErrorMessage } from "@/lib/messages";
 import { useLinksStore } from "@/store/links-store";
 import { LinkCard } from "./LinkCard";
 import { toast } from "sonner";
 
-interface LinkListProps {
-  onEdit: (link: LinkItem) => void;
-}
-
-export function LinkList({ onEdit }: LinkListProps) {
+export function LinkList() {
   const { links, setLinks } = useLinksStore();
   const [isReordering, setIsReordering] = useState(false);
 
@@ -99,17 +94,12 @@ export function LinkList({ onEdit }: LinkListProps) {
       >
         <SortableContext
           items={links.map((l) => l.id)}
-          strategy={rectSortingStrategy}
+          strategy={verticalListSortingStrategy}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="flex flex-col gap-2">
             <AnimatePresence initial={false} mode="popLayout">
-              {links.map((link, index) => (
-                <LinkCard
-                  key={link.id}
-                  link={link}
-                  index={index}
-                  onEdit={onEdit}
-                />
+              {links.map((link) => (
+                <LinkCard key={link.id} link={link} />
               ))}
             </AnimatePresence>
           </div>

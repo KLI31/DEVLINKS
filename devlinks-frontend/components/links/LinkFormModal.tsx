@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, LayoutTemplate } from "lucide-react";
 import type { LinkItem } from "@/types";
 import { linkSchema, type LinkFormValues } from "@/lib/validations/link.schema";
 import { linksApi } from "@/lib/api";
@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { IconPicker } from "./IconPicker";
+import { LinkLayoutModal } from "./LinkLayoutModal";
+import { PLATFORM_ICONS, iconUrl } from "@/lib/icons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -55,14 +57,17 @@ export function LinkFormModal({
       icon: undefined,
       previewImage: undefined,
       isPrimary: false,
+      layout: "classic",
     },
   });
 
   const [showPicker, setShowPicker] = useState(false);
+  const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const iconValue = useWatch({ control, name: "icon" });
   const previewImageValue = useWatch({ control, name: "previewImage" });
   const isPrimaryValue = useWatch({ control, name: "isPrimary" });
+  const layoutValue = useWatch({ control, name: "layout" });
 
   useEffect(() => {
     if (open) {
@@ -73,9 +78,17 @@ export function LinkFormModal({
           icon: editingLink.icon ?? undefined,
           previewImage: editingLink.previewImage ?? undefined,
           isPrimary: editingLink.isPrimary,
+          layout: editingLink.layout ?? "classic",
         });
       } else {
-        reset({ title: "", url: "", icon: undefined, previewImage: undefined, isPrimary: false });
+        reset({
+          title: "",
+          url: "",
+          icon: undefined,
+          previewImage: undefined,
+          isPrimary: false,
+          layout: "classic",
+        });
       }
     }
   }, [open, editingLink, reset]);
@@ -125,6 +138,7 @@ export function LinkFormModal({
           icon: data.icon,
           previewImage: data.isPrimary ? undefined : data.previewImage,
           isPrimary: data.isPrimary,
+          layout: data.layout,
         });
         updateLink(updated);
         toast.success("Link actualizado correctamente");
@@ -135,6 +149,7 @@ export function LinkFormModal({
           icon: data.icon,
           previewImage: data.isPrimary ? undefined : data.previewImage,
           isPrimary: data.isPrimary,
+          layout: data.layout,
         });
         addLink(created);
         toast.success("Link creado correctamente");
@@ -246,9 +261,26 @@ export function LinkFormModal({
                   : "border-border bg-background hover:bg-muted",
               )}
             >
-              <span className="text-muted-foreground">
-                {iconValue ? `Plataforma seleccionada` : "Seleccionar plataforma"}
-              </span>
+              {(() => {
+                const platform = iconValue
+                  ? PLATFORM_ICONS.find((p) => p.slug === iconValue)
+                  : null;
+                return platform ? (
+                  <span className="flex items-center gap-2">
+                    <Image
+                      src={iconUrl(platform.slug)}
+                      alt={platform.label}
+                      width={16}
+                      height={16}
+                      className="size-4 object-contain"
+                      unoptimized
+                    />
+                    <span className="text-foreground">{platform.label}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Seleccionar plataforma</span>
+                );
+              })()}
               <ChevronDown
                 className={cn(
                   "size-4 text-muted-foreground transition-transform",
@@ -275,6 +307,22 @@ export function LinkFormModal({
             </AnimatePresence>
           </div>
 
+          {/* Layout selector */}
+          <div className="flex flex-col gap-2">
+            <Label>Diseño</Label>
+            <button
+              type="button"
+              onClick={() => setLayoutModalOpen(true)}
+              className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-muted"
+            >
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <LayoutTemplate className="size-4" />
+                {layoutValue === "featured" ? "Featured" : "Classic"}
+              </span>
+              <ChevronDown className="size-4 text-muted-foreground" />
+            </button>
+          </div>
+
           <div className="mt-2 flex items-center gap-2 pt-2">
             <Button
               type="button"
@@ -294,6 +342,15 @@ export function LinkFormModal({
               {isEdit ? "Guardar cambios" : "Crear link"}
             </Button>
           </div>
+
+          <LinkLayoutModal
+            open={layoutModalOpen}
+            onOpenChange={setLayoutModalOpen}
+            value={layoutValue ?? "classic"}
+            onChange={(layout) =>
+              setValue("layout", layout, { shouldDirty: true })
+            }
+          />
         </form>
       </DialogContent>
     </Dialog>

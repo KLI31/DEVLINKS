@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { linksApi } from "@/lib/api";
+import { linksApi, userApi } from "@/lib/api";
 import { LinksClient } from "@/components/links/LinksClient";
 import { LinksSkeleton } from "@/components/links/LinksSkeleton";
 
@@ -12,6 +12,9 @@ export default function DashboardLinksPage() {
 }
 
 async function LinksPageContent() {
-  const links = await linksApi.getAll();
-  return <LinksClient initialLinks={links} />;
+  const [links, user] = await Promise.all([
+    linksApi.getAll(),
+    userApi.me().catch(() => null),
+  ]);
+  return <LinksClient initialLinks={links} userProfile={user} />;
 }

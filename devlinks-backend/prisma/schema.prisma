@@ -49,6 +49,7 @@ model Link {
   icon          String?
   previewImage  String?  @map("preview_image")
   isPrimary     Boolean  @default(false) @map("is_primary")
+  layout        String   @default("classic")
   displayOrder  Int      @default(0) @map("display_order")
   isActive      Boolean  @default(true) @map("is_active")
   clicksCount   Int      @default(0) @map("clicks_count")

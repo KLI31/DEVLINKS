@@ -66,6 +66,7 @@ export interface PublicProfile {
     previewImage: string | null;
     isPrimary: boolean;
     displayOrder: number;
+    layout: "classic" | "featured";
   }[];
   projects: Project[];
 }
@@ -79,6 +80,7 @@ export interface LinkItem {
   isPrimary: boolean;
   displayOrder: number;
   isActive: boolean;
+  layout: "classic" | "featured";
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +91,7 @@ export interface CreateLinkPayload {
   icon?: string;
   previewImage?: string;
   isPrimary?: boolean;
+  layout?: "classic" | "featured";
 }
 
 export interface UpdateLinkPayload {
@@ -98,6 +101,7 @@ export interface UpdateLinkPayload {
   previewImage?: string;
   isPrimary?: boolean;
   isActive?: boolean;
+  layout?: "classic" | "featured";
 }
 
 export interface PublicProject {
@@ -207,6 +211,7 @@ export interface ProfileExportJson {
     isPrimary: boolean;
     displayOrder: number;
     isActive: boolean;
+    layout: "classic" | "featured";
   }[];
   stickers: PlacedSticker[];
   projects: {
