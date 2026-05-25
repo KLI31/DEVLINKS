@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 
 import { ThemeProvider } from "./providers/theme-provider";
 import { AuthProvider } from "./providers/auth-provider";
+import { NotificationProvider } from "./providers/notification-provider";
 import "@uiw/react-textarea-code-editor/dist.css";
 import "./globals.css";
 
@@ -156,6 +157,7 @@ export default function RootLayout({
             <div className="flex flex-1 flex-col">{children}</div>
           </AuthProvider>
           <Toaster position="top-right" richColors />
+          <NotificationProvider />
         </ThemeProvider>
       </body>
     </html>

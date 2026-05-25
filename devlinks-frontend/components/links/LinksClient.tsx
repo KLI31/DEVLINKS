@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
-import type { UserProfile, PublicProfile } from "@/types";
+import type { UserProfile, PublicProfile, LinkItem } from "@/types";
 import { useLinksStore } from "@/store/links-store";
 import { Button } from "@/components/ui/button";
 import { LinkList } from "./LinkList";
