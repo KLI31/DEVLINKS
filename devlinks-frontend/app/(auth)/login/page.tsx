@@ -8,7 +8,7 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading, error, clearError } = useAuthStore();
+  const { notifyError, notifySuccess } = useNotifications();
 
   const {
     register,
@@ -36,15 +37,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (error) {
-      toast.error(error);
+      notifyError(error);
       clearError();
     }
-  }, [error, clearError]);
+  }, [error, clearError, notifyError]);
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
       await login(data);
-      toast.success("¡Bienvenido de vuelta!");
+      notifySuccess("¡Bienvenido de vuelta!");
       router.push("/dashboard");
     } catch (err) {
       console.error("Login failed:", err);

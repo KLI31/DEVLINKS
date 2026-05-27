@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 import { importProfileSchema } from "@/lib/validations/import-profile.schema";
 import { userApi } from "@/lib/api/user.api";
 import type {
@@ -115,6 +115,7 @@ export function useImportState({
   user,
 }: UseImportStateProps): UseImportStateReturn {
   const router = useRouter();
+  const { notifySuccess, notifyError, notifyInfo } = useNotifications();
   const [activeTab, setActiveTab] = useState<"editor" | "file">("editor");
   const [jsonText, setJsonText] = useState(() => getInitialJson(currentConfig));
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -151,9 +152,9 @@ export function useImportState({
 
     setIsValid(true);
     setParsedData(result.data);
-    toast.success("JSON válido. Revisa la preview antes de importar.");
+    notifySuccess("JSON válido. Revisa la preview antes de importar.");
     return true;
-  }, [jsonText]);
+  }, [jsonText, notifySuccess]);
 
   const handleFileSelect = useCallback(
     (file: File) => {
@@ -176,11 +177,11 @@ export function useImportState({
         setIsValid(null);
         setParsedData(null);
         setValidationErrors([]);
-        toast.success(`Archivo "${file.name}" cargado en el editor.`);
+        notifySuccess(`Archivo "${file.name}" cargado en el editor.`);
       };
       reader.readAsText(file);
     },
-    [],
+    [notifySuccess],
   );
 
   const handleClear = useCallback(() => {
@@ -198,17 +199,17 @@ export function useImportState({
       setIsValid(null);
       setParsedData(null);
       setValidationErrors([]);
-      toast.info("Perfil actual cargado en el editor.");
+      notifyInfo("Perfil actual cargado en el editor.");
     }
-  }, [currentConfig]);
+  }, [currentConfig, notifyInfo]);
 
   const handleLoadExample = useCallback(() => {
     setJsonText(JSON.stringify(EXAMPLE_JSON, null, 2));
     setIsValid(null);
     setParsedData(null);
     setValidationErrors([]);
-    toast.info("Ejemplo cargado en el editor.");
-  }, []);
+    notifyInfo("Ejemplo cargado en el editor.");
+  }, [notifyInfo]);
 
   const handleDownload = useCallback(() => {
     if (!currentConfig) return;
@@ -236,12 +237,12 @@ export function useImportState({
       try {
         reparsed = JSON.parse(jsonText);
       } catch {
-        toast.error("El JSON no es válido.");
+        notifyError("El JSON no es válido.");
         return;
       }
       const result = importProfileSchema.safeParse(reparsed);
       if (!result.success) {
-        toast.error("El JSON no cumple el esquema requerido.");
+        notifyError("El JSON no cumple el esquema requerido.");
         return;
       }
       data = result.data;
@@ -254,15 +255,15 @@ export function useImportState({
     setIsImporting(true);
     try {
       await userApi.importProfile(importPayload);
-      toast.success("Configuración importada correctamente.");
+      notifySuccess("Configuración importada correctamente.");
       router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al importar";
-      toast.error(message);
+      notifyError(message);
     } finally {
       setIsImporting(false);
     }
-  }, [parsedData, jsonText, validateJson, router]);
+  }, [parsedData, jsonText, validateJson, router, notifySuccess, notifyError]);
 
   const previewProfile: PublicProfile | null = useMemo(() => {
     if (!parsedData || !user) return null;

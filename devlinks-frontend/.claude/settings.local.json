@@ -8,7 +8,11 @@
       "WebFetch(domain:www.mapcn.dev)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\" -Recurse -Name)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\\\\components\" -Recurse -File | ForEach-Object { $_.FullName })",
-      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend\")",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(grep -r \"toast\\\\\\\\.success\\\\|toast\\\\\\\\.error\\\\|toast\\\\\\\\.warning\\\\|toast\\\\\\\\.info\\\\|sonnerToast\\\\|from.*sonner\" \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend/app\" \"C:\\\\Users\\\\lramb\\\\OneDrive\\\\Documentos\\\\DEV\\\\DevLink-project\\\\devlinks-frontend/components\")",
+      "Bash(grep *)"
     ]
   },
   "enableAllProjectMcpServers": true,

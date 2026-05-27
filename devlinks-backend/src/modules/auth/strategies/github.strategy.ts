@@ -28,8 +28,8 @@ export type GithubProfileUser = {
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(configService: ConfigService) {
     super({
-      clientID: configService.get<string>('GITHUB_CLIENT_ID') ?? '',
-      clientSecret: configService.get<string>('GITHUB_CLIENT_SECRET') ?? '',
+      clientID: configService.getOrThrow<string>('GITHUB_CLIENT_ID'),
+      clientSecret: configService.getOrThrow<string>('GITHUB_CLIENT_SECRET'),
       callbackURL:
         configService.get<string>('GITHUB_CALLBACK_URL') ??
         'http://localhost:3001/auth/github/callback',

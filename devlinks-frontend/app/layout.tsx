@@ -10,8 +10,6 @@ import {
   Poppins,
   Space_Grotesk,
 } from "next/font/google";
-import { Toaster } from "sonner";
-
 import { ThemeProvider } from "./providers/theme-provider";
 import { AuthProvider } from "./providers/auth-provider";
 import { NotificationProvider } from "./providers/notification-provider";
@@ -156,7 +154,6 @@ export default function RootLayout({
           <AuthProvider>
             <div className="flex flex-1 flex-col">{children}</div>
           </AuthProvider>
-          <Toaster position="top-right" richColors />
           <NotificationProvider />
         </ThemeProvider>
       </body>

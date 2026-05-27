@@ -12,6 +12,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,6 +28,8 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
 
+@ApiTags('user')
+@ApiCookieAuth('accessToken')
 @Controller('user')
 export class UserController {
   constructor(
@@ -45,13 +48,12 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   getLocationSuggestion(@Req() req: Request) {
-    // const forwarded = req.headers['x-forwarded-for'];
-    // const ip =
-    //   typeof forwarded === 'string'
-    //     ? forwarded
-    //     : (req.socket?.remoteAddress ?? '127.0.0.1');
-    const temporalIp = '8.8.8.8';
-    return this.userService.getLocationSuggestion(temporalIp);
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip =
+      typeof forwarded === 'string'
+        ? forwarded.split(',')[0].trim()
+        : (req.socket?.remoteAddress ?? '127.0.0.1');
+    return this.userService.getLocationSuggestion(ip);
   }
 
   @Patch('me')

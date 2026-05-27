@@ -85,7 +85,6 @@ export class UserService {
       bgColor: string;
       profileLayout: string;
       coverImageUrl: string;
-      passwordHash: string;
     }> = {};
 
     if (dto.username !== undefined) data.username = dto.username;
@@ -101,9 +100,6 @@ export class UserService {
     if (dto.bgColor !== undefined) data.bgColor = dto.bgColor;
     if (dto.profileLayout !== undefined) data.profileLayout = dto.profileLayout;
     if (dto.coverImageUrl !== undefined) data.coverImageUrl = dto.coverImageUrl;
-    if (dto.password) {
-      data.passwordHash = await bcrypt.hash(dto.password, 12);
-    }
 
     const updated = await this.prisma.user.update({
       where: { id: userId },

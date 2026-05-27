@@ -14,10 +14,9 @@
  * que este componente observa y renderiza.
  */
 
-import { useEffect, useCallback, useRef } from "react";
-import { toast as sonnerToast } from "sonner";
 import { useNotificationStore } from "@/store/notification-store";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { ToastStack } from "@/components/ui/toast-stack";
 import {
   Dialog,
   DialogContent,
@@ -27,42 +26,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-function ToastObserver() {
-  const notifications = useNotificationStore((state) => state.notifications);
-  const remove = useNotificationStore((state) => state.remove);
-  const shownRef = useRef<Set<string>>(new Set());
-
-  const showToast = useCallback(
-    (id: string, title: string, message: string | undefined, variant: string) => {
-      const toastFn =
-        {
-          success: sonnerToast.success,
-          error: sonnerToast.error,
-          warning: sonnerToast.warning,
-          info: sonnerToast.info,
-        }[variant] ?? sonnerToast;
-
-      toastFn(title, {
-        description: message,
-        onDismiss: () => remove(id),
-        onAutoClose: () => remove(id),
-      });
-    },
-    [remove],
-  );
-
-  useEffect(() => {
-    notifications.forEach((n) => {
-      if (n.type === "toast" && !shownRef.current.has(n.id)) {
-        shownRef.current.add(n.id);
-        showToast(n.id, n.title, n.message, n.variant);
-      }
-    });
-  }, [notifications, showToast]);
-
-  return null;
-}
 
 function ConfirmObserver() {
   const notifications = useNotificationStore((state) => state.notifications);
@@ -136,7 +99,7 @@ function AlertObserver() {
                 <Button
                   variant="outline"
                   onClick={() => remove(alert.id)}
-                  className="w-full sm:w-auto"
+                  className="w-full cursor-pointer sm:w-auto"
                 >
                   Cerrar
                 </Button>
@@ -146,7 +109,7 @@ function AlertObserver() {
                       remove(alert.id);
                       alert.onAction?.();
                     }}
-                    className="w-full sm:w-auto"
+                    className="w-full cursor-pointer sm:w-auto"
                   >
                     {alert.actionLabel}
                   </Button>
@@ -163,7 +126,7 @@ function AlertObserver() {
 export function NotificationProvider() {
   return (
     <>
-      <ToastObserver />
+      <ToastStack />
       <ConfirmObserver />
       <AlertObserver />
     </>

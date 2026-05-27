@@ -81,13 +81,13 @@ export function DeleteConfirmationDialog({
         </DialogHeader>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={handleCancel} className="w-full cursor-pointer sm:w-auto">
             {cancelLabel}
           </Button>
           <Button
             variant="destructive"
             onClick={handleConfirm}
-            className="w-full sm:w-auto"
+            className="w-full cursor-pointer sm:w-auto"
           >
             {confirmLabel}
           </Button>

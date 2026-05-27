@@ -1,7 +1,5 @@
 export const jwtConfig = {
-  secret: process.env.JWT_SECRET ?? 'secret',
   expiresIn: process.env.JWT_EXPIRES_IN ?? process.env.JWT_EXPIRY ?? '15m',
-  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET ?? 'refresh-secret',
   refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRY ?? '7d',
 };
 

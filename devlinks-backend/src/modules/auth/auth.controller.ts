@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
@@ -38,6 +39,7 @@ const REFRESH_COOKIE = {
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
 };
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -61,7 +63,7 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginAuthDto,
     @Res({ passthrough: true }) res: Response,

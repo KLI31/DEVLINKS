@@ -39,7 +39,10 @@ interface AlertOptions {
 }
 
 /** Factory de notificaciones toast */
-function createToast(variant: ToastVariant, options: ToastOptions): Notification {
+function createToast(
+  variant: ToastVariant,
+  options: ToastOptions,
+): Notification {
   return createNotification({
     type: "toast",
     variant,
@@ -101,10 +104,6 @@ export const notify = {
   /** Diálogo de alerta */
   alert: (options: AlertOptions) => createAlert(options),
 
-  /**
-   * Confirmación para eliminar información.
-   * Preconfigurado con texto y variantes apropiadas.
-   */
   delete: (options: {
     title?: string;
     message?: string;

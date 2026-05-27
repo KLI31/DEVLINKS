@@ -16,7 +16,7 @@ import { GithubAuthGuard } from './guards/github.auth.guards';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') ?? 'secret',
+        secret: config.getOrThrow<string>('JWT_SECRET'),
       }),
     }),
   ],

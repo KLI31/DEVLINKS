@@ -1,9 +1,12 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 
+@ApiTags('analytics')
+@ApiCookieAuth('accessToken')
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
 export class AnalyticsController {

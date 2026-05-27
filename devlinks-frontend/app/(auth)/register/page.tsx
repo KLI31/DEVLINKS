@@ -8,7 +8,7 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ function RegisterPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [strength, setStrength] = useState<PasswordStrength | null>(null);
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { notifyError, notifySuccess } = useNotifications();
 
   const {
     register,
@@ -52,10 +53,10 @@ function RegisterPageContent() {
 
   useEffect(() => {
     if (error) {
-      toast.error(error);
+      notifyError(error);
       clearError();
     }
-  }, [error, clearError]);
+  }, [error, clearError, notifyError]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
@@ -65,7 +66,7 @@ function RegisterPageContent() {
         password: data.password,
         displayName: data["display-name"],
       });
-      toast.success("¡Cuenta creada exitosamente!");
+      notifySuccess("¡Cuenta creada exitosamente!");
       router.push("/dashboard");
     } catch {
       // Error ya manejado por el store

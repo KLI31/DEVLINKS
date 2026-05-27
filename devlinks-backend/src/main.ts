@@ -1,14 +1,21 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { CustomLogger } from './common/logger/custom-logger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import compression from 'compression';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: new CustomLogger(),
+  });
 
   app.use(helmet());
   app.use(cookieParser());
+  app.use(compression());
 
   const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
@@ -29,8 +36,40 @@ async function bootstrap() {
     }),
   );
 
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('DevLinks API')
+    .setDescription(
+      'API para la plataforma DevLinks — hub de links para desarrolladores',
+    )
+    .setVersion('1.0')
+    .addCookieAuth('accessToken')
+    .addTag('auth', 'Autenticación y gestión de sesión')
+    .addTag('user', 'Perfil de usuario')
+    .addTag('links', 'Gestión de links')
+    .addTag('github', 'Integración con GitHub')
+    .addTag('analytics', 'Analítica de clicks y visitas')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+
   app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT || 3001);
+  const PORT = process.env.PORT || 3001;
+
+  await app.listen(PORT, () => {
+    Logger.log(`🚀 Server running on port ${PORT}`, 'Bootstrap');
+  });
+
+  Logger.log(
+    `📚 API Docs disponibles en: http://localhost:${PORT}/api/docs`,
+    'Bootstrap',
+  );
 }
+
 void bootstrap();

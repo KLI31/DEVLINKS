@@ -1,7 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { lookupIp, hashIp } from '../user/helpers/geo-ip.helper';
-import geoip from 'geoip-lite';
+
+const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
+  US: [37.09, -95.71], MX: [23.63, -102.55], CA: [56.13, -106.35],
+  GB: [55.38, -3.44], DE: [51.17, 10.45], FR: [46.23, 2.21],
+  ES: [40.46, -3.75], IT: [41.87, 12.57], BR: [-14.24, -51.93],
+  AR: [-38.42, -63.62], CO: [4.57, -74.3], CL: [-35.68, -71.54],
+  PE: [-9.19, -75.02], VE: [6.42, -66.59], EC: [-1.83, -78.18],
+  CN: [35.86, 104.2], JP: [36.2, 138.25], KR: [35.91, 127.77],
+  IN: [20.59, 78.96], RU: [61.52, 105.32], AU: [-25.27, 133.78],
+  NL: [52.13, 5.29], PL: [51.92, 19.15], SE: [60.13, 18.64],
+  NO: [60.47, 8.47], DK: [56.26, 9.5], FI: [61.92, 25.75],
+  PT: [39.4, -8.22], ZA: [-30.56, 22.94], NG: [9.08, 8.68],
+  EG: [26.82, 30.8], KE: [-0.02, 37.91], MA: [31.79, -7.09],
+  IL: [31.05, 34.85], TR: [38.96, 35.24], SA: [23.89, 45.08],
+  AE: [23.42, 53.85], SG: [1.35, 103.82], TH: [15.87, 100.99],
+  ID: [-0.79, 113.92], PH: [12.88, 121.77], VN: [14.06, 108.28],
+  NZ: [-40.9, 174.89],
+};
 
 function getStartDate(days: number): Date {
   const date = new Date();
@@ -194,15 +211,11 @@ export class AnalyticsService {
       _count: { countryCode: true },
     });
 
+    const displayNames = new Intl.DisplayNames(['es'], { type: 'region' });
     return rows.map((row) => {
       const countryCode = row.countryCode!;
-      const geo = geoip.lookup(countryCode);
-      const lat = geo?.ll?.[0] ?? 0;
-      const lng = geo?.ll?.[1] ?? 0;
-      const countryName = countryCode
-        ? (new Intl.DisplayNames(['es'], { type: 'region' }).of(countryCode) ??
-          countryCode)
-        : countryCode;
+      const [lat, lng] = COUNTRY_CENTROIDS[countryCode] ?? [0, 0];
+      const countryName = displayNames.of(countryCode) ?? countryCode;
 
       return {
         countryCode,

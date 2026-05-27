@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { userApi } from "@/lib/api/user.api";
 import type { PlacedSticker, UpdateProfilePayload } from "@/types";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -48,6 +48,7 @@ function sanitize(v: CustomizeValues): UpdateProfilePayload {
 }
 
 export function useCustomize() {
+  const { notifyError } = useNotifications();
   const [values, setValues]       = useState<CustomizeValues>(DEFAULTS);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isLoading, setIsLoading] = useState(true);
@@ -92,9 +93,9 @@ export function useCustomize() {
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
       setSaveStatus("error");
-      toast.error("Error al guardar los cambios");
+      notifyError("Error al guardar los cambios");
     }
-  }, []);
+  }, [notifyError]);
 
   const update = useCallback(
     (patch: Partial<CustomizeValues>) => {
@@ -118,9 +119,9 @@ export function useCustomize() {
       savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
       setSaveStatus("error");
-      toast.error("Error al guardar stickers");
+      notifyError("Error al guardar stickers");
     }
-  }, []);
+  }, [notifyError]);
 
   const updateStickers = useCallback(
     (stickers: PlacedSticker[]) => {

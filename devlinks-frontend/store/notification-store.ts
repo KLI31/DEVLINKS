@@ -53,14 +53,8 @@ export type Notification =
 interface NotificationStore {
   /** Lista de notificaciones activas — los observers se suscriben a esto */
   notifications: Notification[];
-
-  /** Añadir una notificación al Subject */
   add: (notification: Notification) => void;
-
-  /** Eliminar una notificación por ID */
   remove: (id: string) => void;
-
-  /** Limpiar todas las notificaciones */
   clear: () => void;
 }
 
@@ -88,9 +82,9 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
  * Helper para crear notificaciones con ID auto-generado.
  * Usado internamente por la Factory.
  */
-export function createNotification<T extends Omit<Notification, "id" | "createdAt">>(
-  notification: T,
-): Notification {
+export function createNotification<
+  T extends Omit<Notification, "id" | "createdAt">,
+>(notification: T): Notification {
   return {
     ...notification,
     id: generateId(),

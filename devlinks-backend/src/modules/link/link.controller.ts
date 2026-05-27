@@ -13,6 +13,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import { LinkService } from './link.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -21,10 +22,13 @@ import { ReorderLinksDto } from './dto/reorder-links.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { assertSafeUrl } from '../../common/utils/url-validator';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
 import * as cheerio from 'cheerio';
 
+@ApiTags('links')
+@ApiCookieAuth('accessToken')
 @Controller('links')
 @UseGuards(JwtAuthGuard)
 export class LinkController {
@@ -42,14 +46,18 @@ export class LinkController {
   /** Obtener preview Open Graph de una URL */
   @Get('preview')
   async getPreview(@Query('url') url: string) {
-    if (!url || !url.startsWith('http')) {
+    if (!url) {
       throw new BadRequestException({ error: 'Failed to fetch' });
     }
+    assertSafeUrl(url);
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       const response = await fetch(url, {
         headers: { 'User-Agent': 'Twitterbot/1.0' },
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (!response.ok) {
         throw new BadRequestException({ error: 'Failed to fetch' });

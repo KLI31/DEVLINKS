@@ -10,10 +10,11 @@ import { AvatarUpload } from "@/components/settings/avatarUpload";
 import type { AvatarUploadResult } from "@/components/settings/avatarUploadModal";
 import { User, Shield, Save, MapPin, Loader2 } from "lucide-react";
 import { userApi } from "@/lib/api/user.api";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
+  const { notifySuccess, notifyError } = useNotifications();
   const [activeTab, setActiveTab] = useState("profile");
   const [avatarResult, setAvatarResult] = useState<AvatarUploadResult>(null);
 
@@ -63,7 +64,6 @@ export default function SettingsPage() {
       payload.avatarUrl = avatarResult.url;
     }
 
-    // TODO: upload file to server when backend supports multipart upload
     if (avatarResult?.type === "file") {
       console.warn("File upload not yet supported by backend");
     }
@@ -82,13 +82,13 @@ export default function SettingsPage() {
         });
       }
 
-      toast.success("Perfil actualizado correctamente");
+      notifySuccess("Perfil actualizado correctamente");
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Error al actualizar el perfil";
-      toast.error(message);
+      notifyError(message);
     }
   };
 
@@ -101,12 +101,12 @@ export default function SettingsPage() {
       if (result.formatted) {
         setLocationSuggestion(result.formatted);
       } else {
-        toast.error("No se pudo detectar la ubicación");
+        notifyError("No se pudo detectar la ubicación");
       }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Error al detectar ubicación";
-      toast.error(message);
+      notifyError(message);
     } finally {
       setLocationLoading(false);
     }

@@ -8,11 +8,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import { GithubService } from './github.service';
 import { GetGithubStatsDto } from './dto/get-github-stats.dto';
 import { DisconnectGithubDto } from './dto/disconnect-github.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 
+@ApiTags('github')
 @Controller('github')
 export class GithubController {
   constructor(private readonly githubService: GithubService) {}
