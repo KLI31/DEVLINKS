@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, Check, QrCode, Share2, Link } from "lucide-react";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -104,6 +104,7 @@ const socialPlatforms = [
 
 export function ShareProfileModal({ className }: ShareProfileModalProps) {
   const { user } = useAuthStore();
+  const { notifySuccess, notifyError } = useNotifications();
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -115,10 +116,10 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
-      toast.success("Link copiado al portapapeles");
+      notifySuccess("Link copiado al portapapeles");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Error al copiar el link");
+      notifyError("Error al copiar el link");
     }
   };
 
@@ -133,7 +134,7 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
         });
       } catch (error) {
         if (error instanceof Error && error.name !== "AbortError") {
-          toast.error("Error al compartir");
+          notifyError("Error al compartir");
         }
       }
     } else {

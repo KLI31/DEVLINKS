@@ -13,7 +13,7 @@ import { useLinksStore } from "@/store/links-store";
 import { Switch } from "@/components/ui/switch";
 import { iconUrl } from "@/lib/icons";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 import { LinkLayoutModal } from "./LinkLayoutModal";
 
 function DragHandleIcon({ className }: { className?: string }) {
@@ -38,6 +38,7 @@ interface LinkCardProps {
 
 export function LinkCard({ link }: LinkCardProps) {
   const { updateLink, removeLink } = useLinksStore();
+  const { notifyError, notifySuccess, notifyDelete } = useNotifications();
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,23 +70,24 @@ export function LinkCard({ link }: LinkCardProps) {
       const updated = await linksApi.toggle(link.id);
       updateLink(updated);
     } catch (err) {
-      toast.error(resolveErrorMessage(err));
+      notifyError(resolveErrorMessage(err));
     } finally {
       setIsToggling(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("¿Eliminar este link? Esta acción no se puede deshacer.")) return;
-    setIsDeleting(true);
-    try {
-      await linksApi.remove(link.id);
-      removeLink(link.id);
-      toast.success("Link eliminado");
-    } catch (err) {
-      toast.error(resolveErrorMessage(err));
-      setIsDeleting(false);
-    }
+  const handleDelete = () => {
+    notifyDelete(link.title, async () => {
+      setIsDeleting(true);
+      try {
+        await linksApi.remove(link.id);
+        removeLink(link.id);
+        notifySuccess("Link eliminado");
+      } catch (err) {
+        notifyError(resolveErrorMessage(err));
+        setIsDeleting(false);
+      }
+    });
   };
 
   const saveField = async (field: "title" | "url", value: string) => {
@@ -96,7 +98,7 @@ export function LinkCard({ link }: LinkCardProps) {
       const updated = await linksApi.update(link.id, { [field]: trimmed });
       updateLink(updated);
     } catch (err) {
-      toast.error(resolveErrorMessage(err));
+      notifyError(resolveErrorMessage(err));
       if (field === "title") setTitleDraft(link.title);
       else setUrlDraft(link.url);
     } finally {
@@ -140,7 +142,7 @@ export function LinkCard({ link }: LinkCardProps) {
     linksApi
       .update(link.id, { layout })
       .then((updated) => updateLink(updated))
-      .catch((err) => toast.error(resolveErrorMessage(err)));
+      .catch((err) => notifyError(resolveErrorMessage(err)));
   };
 
   return (

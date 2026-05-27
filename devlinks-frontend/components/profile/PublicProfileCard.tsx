@@ -16,7 +16,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import type {
   PublicProfile,
@@ -112,6 +112,7 @@ export function PublicProfileCard({
   githubStats,
   hideShare = false,
 }: PublicProfileCardProps) {
+  const { notifySuccess, notifyError } = useNotifications();
   const coverRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const coverOpacity = useTransform(scrollY, [0, 300], [1, 0]);
@@ -127,10 +128,10 @@ export function PublicProfileCard({
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
-      toast.success("Link copiado al portapapeles");
+      notifySuccess("Link copiado al portapapeles");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Error al copiar el link");
+      notifyError("Error al copiar el link");
     }
   };
 

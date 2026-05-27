@@ -23,10 +23,11 @@ import { linksApi } from "@/lib/api";
 import { resolveErrorMessage } from "@/lib/messages";
 import { useLinksStore } from "@/store/links-store";
 import { LinkCard } from "./LinkCard";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export function LinkList() {
   const { links, setLinks } = useLinksStore();
+  const { notifyError } = useNotifications();
   const [isReordering, setIsReordering] = useState(false);
 
   const sensors = useSensors(
@@ -63,7 +64,7 @@ export function LinkList() {
       );
     } catch (err) {
       setLinks(previous);
-      toast.error(resolveErrorMessage(err));
+      notifyError(resolveErrorMessage(err));
     } finally {
       setIsReordering(false);
     }

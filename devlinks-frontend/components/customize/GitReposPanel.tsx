@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { githubApi, getDevIconUrl } from "@/lib/api/github.api";
 import { userApi } from "@/lib/api/user.api";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 import type { GithubRepo, Project, PinnedRepoPayload } from "@/types";
 import Image from "next/image";
 
@@ -49,6 +49,7 @@ interface GitReposPanelProps {
 }
 
 export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
+  const { notifySuccess, notifyError } = useNotifications();
   const [allRepos, setAllRepos] = useState<GithubRepo[]>([]);
   const [saved, setSaved] = useState<Project[]>([]);
   const [search, setSearch] = useState("");
@@ -108,7 +109,7 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
         nextSaved = saved.filter((p) => p.url !== repo.html_url);
       } else {
         if (saved.length >= MAX_PINNED) {
-          toast.error(`Máximo ${MAX_PINNED} repositorios`);
+          notifyError(`Máximo ${MAX_PINNED} repositorios`);
           return;
         }
         const newProject: Project = {
@@ -139,19 +140,19 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
 
       try {
         await userApi.setPinnedRepos(payload);
-        toast.success(
+        notifySuccess(
           alreadySelected ? "Repositorio eliminado" : "Repositorio guardado",
         );
       } catch (err) {
         setSaved(previousSaved);
-        toast.error(
+        notifyError(
           err instanceof Error ? err.message : "Error al guardar repositorios",
         );
       } finally {
         setSaving(false);
       }
     },
-    [saved, saving, isSelected],
+    [saved, saving, isSelected, notifySuccess, notifyError],
   );
 
   const removeSaved = useCallback(
@@ -174,17 +175,17 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
 
       try {
         await userApi.setPinnedRepos(payload);
-        toast.success("Repositorio eliminado");
+        notifySuccess("Repositorio eliminado");
       } catch (err) {
         setSaved(previousSaved);
-        toast.error(
+        notifyError(
           err instanceof Error ? err.message : "Error al guardar repositorios",
         );
       } finally {
         setSaving(false);
       }
     },
-    [saved, saving],
+    [saved, saving, notifySuccess, notifyError],
   );
 
   const filtered = allRepos.filter(

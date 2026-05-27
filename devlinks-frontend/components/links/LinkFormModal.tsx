@@ -24,7 +24,7 @@ import {
 import { IconPicker } from "./IconPicker";
 import { LinkLayoutModal } from "./LinkLayoutModal";
 import { PLATFORM_ICONS, iconUrl } from "@/lib/icons";
-import { toast } from "sonner";
+import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 
 interface LinkFormModalProps {
@@ -39,6 +39,7 @@ export function LinkFormModal({
   editingLink,
 }: LinkFormModalProps) {
   const { addLink, updateLink } = useLinksStore();
+  const { notifySuccess, notifyError } = useNotifications();
   const isEdit = !!editingLink;
 
   const {
@@ -141,7 +142,7 @@ export function LinkFormModal({
           layout: data.layout,
         });
         updateLink(updated);
-        toast.success("Link actualizado correctamente");
+        notifySuccess("Link actualizado correctamente");
       } else {
         const created = await linksApi.create({
           title: data.title,
@@ -152,11 +153,11 @@ export function LinkFormModal({
           layout: data.layout,
         });
         addLink(created);
-        toast.success("Link creado correctamente");
+        notifySuccess("Link creado correctamente");
       }
       onOpenChange(false);
     } catch (err) {
-      toast.error(resolveErrorMessage(err));
+      notifyError(resolveErrorMessage(err));
     }
   };
 

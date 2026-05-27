@@ -153,7 +153,7 @@ export function LinksClient({ initialLinks, userProfile }: LinksClientProps) {
         ) : (
           <Button
             onClick={handleAdd}
-            className="h-12 gap-2 rounded-full text-base"
+            className="h-12 gap-2 rounded-full text-base cursor-pointer"
           >
             <Plus className="size-5" />
             Agregar link
