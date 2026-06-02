@@ -1,0 +1,248 @@
+name: deploy-services
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # BACKEND — NestJS 11 · Prisma · PostgreSQL 16 · Redis 7
+  # ─────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devlinks
+          POSTGRES_PASSWORD: devlinks
+          POSTGRES_DB: devlinks_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: devlinks-backend
+
+    env:
+      DATABASE_URL: postgresql://devlinks:devlinks@localhost:5432/devlinks_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-minimum-length-32-chars!
+      ENCRYPTION_KEY: ci-encryption-key-32-chars-exactly!
+      NODE_ENV: test
+      PORT: "3001"
+      FRONTEND_URL: http://localhost:3000
+      GITHUB_CLIENT_ID: ci-dummy-github-client-id
+      GITHUB_CLIENT_SECRET: ci-dummy-github-client-secret
+      GITHUB_CALLBACK_URL: http://localhost:3001/auth/github/callback
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: devlinks-backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests with coverage
+        run: npm run test:cov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          directory: devlinks-backend/coverage
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Build check
+        run: npm run build
+
+  # ─────────────────────────────────────────────────────────────────────
+  # FRONTEND — Next.js 16 · React 19 · Tailwind v4
+  # ─────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: devlinks-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: devlinks-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost/api
+          NEXT_PUBLIC_APP_URL: http://localhost
+        run: npm run build
+
+  docker:
+    name: Docker — ${{ matrix.service }}
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            context: devlinks-backend
+            dockerfile: devlinks-backend/Dockerfile.prod
+          - service: frontend
+            context: devlinks-frontend
+            dockerfile: devlinks-frontend/Dockerfile.prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/devlinks-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=sha-${{ steps.sha.outputs.short }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=devlinks-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=devlinks-${{ matrix.service }}
+
+  deploy:
+    name: Deploy to Production
+    needs: docker
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            # Get latest compose + nginx configs
+            git pull origin main
+
+            # Auth with GHCR
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+              docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+
+            # Export vars used by docker-compose.ghcr.yml
+            export GHCR_OWNER="${{ github.repository_owner }}"
+            export IMAGE_TAG="sha-${{ steps.sha.outputs.short }}"
+
+            # Pull the exact images verified by CI
+            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
+              pull backend frontend
+
+            # Rolling update: backend first so migrations run before frontend restarts
+            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
+              up -d --no-build --no-deps backend
+
+            # Wait for backend healthcheck then run migrations
+            sleep 8
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              npx prisma migrate deploy
+
+            # Update frontend
+            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
+              up -d --no-build --no-deps frontend
+
+            # Reload nginx to pick up any config changes
+            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || true
+
+            # Remove dangling images to free disk
+            docker image prune -f
+
+            echo "Deployed: $IMAGE_TAG"

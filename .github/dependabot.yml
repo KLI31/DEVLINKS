@@ -1,0 +1,50 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /devlinks-backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      nestjs:
+        patterns: ["@nestjs/*"]
+      prisma:
+        patterns: ["@prisma/*", "prisma"]
+      security-deps:
+        patterns: ["helmet", "bcrypt", "passport*"]
+
+  - package-ecosystem: npm
+    directory: /devlinks-frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "@types/react*"]
+      shadcn-ui:
+        patterns:
+          [
+            "@radix-ui/*",
+            "shadcn",
+            "class-variance-authority",
+            "clsx",
+            "tailwind-merge",
+          ]
+
+  - package-ecosystem: docker
+    directory: /devlinks-backend
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /devlinks-frontend
+    schedule:
+      interval: weekly
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
