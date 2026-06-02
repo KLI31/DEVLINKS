@@ -2,90 +2,60 @@
 
 import { useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { AlertCircle, Check, Link2, Loader2, MapPin } from "lucide-react";
-import Image from "next/image";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import type { CustomizeValues, SaveStatus } from "../../hooks/useCustomize";
-import type { PlacedSticker } from "@/types";
-import { iconUrl } from "@/lib/icons";
-import { getDevIconUrl } from "@/lib/api/github.api";
+import type { PlacedSticker, Project, LinkItem, GithubStats } from "@/types";
+import { cn } from "@/lib/utils";
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 import { ProfileSticker } from "./ProfileSticker";
+import { ProfilePreview } from "./ProfilePreview";
 
-const BUTTON_RADIUS: Record<string, string> = {
-  "rounded-fill": "8px",
-  "sharp-fill": "2px",
-  "pill-fill": "9999px",
-  "rounded-outline": "8px",
-  "sharp-outline": "2px",
-  "pill-outline": "9999px",
-};
-
-const IS_OUTLINE: Record<string, boolean> = {
-  "rounded-outline": true,
-  "sharp-outline": true,
-  "pill-outline": true,
-};
-
-const FONT_CSS: Record<string, string> = {
-  "jetbrains-mono": "'JetBrains Mono', monospace",
-  "fira-code": "'Fira Code', monospace",
-  mono: "ui-monospace, monospace",
-  inter: "'Inter', sans-serif",
-  poppins: "'Poppins', sans-serif",
-  "space-grotesk": "'Space Grotesk', sans-serif",
-  outfit: "'Outfit', sans-serif",
-  "dm-sans": "'DM Sans', sans-serif",
-  playfair: "'Playfair Display', serif",
-  fraunces: "'Fraunces', serif",
-};
-
-const MOCK_SOCIAL_SLUGS = ["x", "instagram", "youtube", "discord"];
-
-const MOCK_REPOS = [
-  {
-    fullName: "KLI31/curso-react",
-    description: "Curso de React desde cero a avanzado",
-    language: "TypeScript",
-  },
-  {
-    fullName: "KLI31/midfy",
-    description: "Librería de componentes React",
-    language: "TypeScript",
-  },
-  {
-    fullName: "KLI31/configs",
-    description: "Mis configuraciones de desarrollo",
-    language: "JavaScript",
-  },
+const MOCK_LINKS: LinkItem[] = [
+  { id: "l1", title: "Portfolio", url: "https://dribbble.com", icon: "dribbble", previewImage: null, isPrimary: false, displayOrder: 0, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
+  { id: "l2", title: "Blog", url: "https://medium.com", icon: "medium", previewImage: null, isPrimary: false, displayOrder: 1, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
+  { id: "l3", title: "GitHub", url: "https://github.com", icon: "github", previewImage: null, isPrimary: true, displayOrder: 0, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
+  { id: "l4", title: "Twitter / X", url: "https://x.com", icon: "x", previewImage: null, isPrimary: true, displayOrder: 1, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
+  { id: "l5", title: "LinkedIn", url: "https://linkedin.com", icon: "linkedin", previewImage: null, isPrimary: true, displayOrder: 2, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
 ];
 
-const MOCK_LINKS = [
-  { label: "Portfolio", slug: "dribbble" },
-  { label: "Blog", slug: "medium" },
-  { label: "npm", slug: "npm" },
+const MOCK_PROJECTS: Project[] = [
+  { id: "p1", title: "DevLinks", description: "Plataforma de links para desarrolladores", url: "https://github.com", githubRepo: "devlinks", stars: 12, language: "TypeScript", pinned: true, displayOrder: 0 },
+  { id: "p2", title: "Prueba-tecnica-OMC_LEADS", description: "Solución a prueba técnica de OMC", url: "https://github.com", githubRepo: "omc-leads", stars: 3, language: "TypeScript", pinned: true, displayOrder: 1 },
+  { id: "p3", title: "Cifra-it-prueba-tecnica", description: "Prueba técnica para desarrollador Frontend", url: "https://github.com", githubRepo: "cifra-it", stars: 1, language: "TypeScript", pinned: true, displayOrder: 2 },
 ];
 
-const LANG_COLOR: Record<string, string> = {
-  TypeScript: "#3178c6",
-  JavaScript: "#f1e05a",
-  Go: "#00ADD8",
-  Rust: "#dea584",
+const MOCK_STATS: GithubStats = {
+  user: {
+    login: "usuario",
+    name: "Usuario",
+    avatar_url: "",
+    public_repos: 46,
+    followers: 5,
+    following: 6,
+    bio: null,
+  },
+  topRepos: [
+    { id: 1, name: "repo1", description: null, html_url: "", stargazers_count: 3, forks_count: 0, language: "TypeScript", pushed_at: "", updated_at: "" },
+  ],
+  topLanguages: [{ language: "TypeScript", count: 20, pct: 80, color: "#3178c6" }],
+  totalRepos: 46,
+  followers: 5,
+  contributions: Array.from({ length: 196 }, (_, i) => ({
+    date: new Date(Date.now() - (196 - i) * 86400000).toISOString().split("T")[0],
+    count: Math.floor(Math.random() * 8),
+    level: Math.floor(Math.random() * 5) as 0 | 1 | 2 | 3 | 4,
+  })),
+  totalContributions: 150,
+  fetchedAt: Date.now(),
 };
-
-function perceivedLuminance(hex: string): number {
-  const clean = hex.replace("#", "").padEnd(6, "0");
-  const r = parseInt(clean.slice(0, 2), 16) / 255;
-  const g = parseInt(clean.slice(2, 4), 16) / 255;
-  const b = parseInt(clean.slice(4, 6), 16) / 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b;
-}
 
 interface CustomizeCanvasProps {
   values: CustomizeValues;
   user: AuthUser | null;
   saveStatus: SaveStatus;
   onUpdateStickers: (stickers: PlacedSticker[]) => void;
+  mode?: "preview" | "stickers";
 }
 
 function SaveBadge({ status }: { status: SaveStatus }) {
@@ -123,71 +93,18 @@ export function CustomizeCanvas({
   user,
   saveStatus,
   onUpdateStickers,
+  mode = "preview",
 }: CustomizeCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const { setNodeRef, isOver } = useDroppable({
-    id: "profile-card-canvas",
+
+  const isStickersMode = mode === "stickers";
+
+  const dropId = isStickersMode ? "stickers-canvas" : "profile-card-canvas";
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
+    id: dropId,
   });
-
-  const buttonRadius = BUTTON_RADIUS[values.buttonStyle] ?? "8px";
-  const isOutline = IS_OUTLINE[values.buttonStyle] ?? false;
-  const fontFamily = FONT_CSS[values.fontFamily] ?? FONT_CSS["jetbrains-mono"];
-
-  const isLight = perceivedLuminance(values.bgColor) > 0.5;
-  const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
-  const textSecond = isLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
-  const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
-  const cardBorder = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.07)";
-  const dividerColor = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
-  const cardBaseColor = values.bgColor;
-
-  const hasCoverUrl = Boolean(values.coverImageUrl);
-
-  const coverBg = hasCoverUrl
-    ? {
-        backgroundImage: `url(${values.coverImageUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }
-    : values.bgType === "gradient"
-      ? {
-          background: `linear-gradient(135deg, color-mix(in srgb, ${values.bgColor} 90%, #000 50%) 0%, ${values.accentColor}45 100%)`,
-        }
-      : {
-          background: `linear-gradient(160deg, color-mix(in srgb, ${values.bgColor} 60%, #000 40%) 0%, ${values.accentColor}20 100%)`,
-        };
-
-  const cardBg =
-    values.bgType === "gradient"
-      ? `linear-gradient(160deg, ${values.bgColor} 0%, color-mix(in srgb, ${values.bgColor} 75%, ${values.accentColor} 25%) 100%)`
-      : values.bgColor;
-
-  const linkStyle = isOutline
-    ? { border: `1px solid ${values.accentColor}55`, background: "transparent" }
-    : {
-        border: `1px solid ${values.accentColor}28`,
-        background: `${values.accentColor}0d`,
-      };
-
-  const repoStyle = {
-    border: `1px solid ${values.accentColor}20`,
-    background: `${values.accentColor}08`,
-  };
-
-  const socialCircleStyle = {
-    border: `1px solid ${values.accentColor}35`,
-    background: `${values.accentColor}12`,
-  };
-
-  const initials = user?.displayName
-    ? user.displayName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "?";
 
   const handleStickerUpdate = (idx: number, updated: PlacedSticker) => {
     const next = [...values.stickers];
@@ -201,251 +118,131 @@ export function CustomizeCanvas({
     setSelectedIdx(null);
   };
 
+  const profile = user
+    ? {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        bio: user.bio,
+        location: user.location,
+        avatarUrl: user.avatarUrl,
+        githubUsername: user.githubUsername,
+        theme: values.theme,
+        accentColor: values.accentColor,
+        buttonStyle: values.buttonStyle,
+        fontFamily: values.fontFamily,
+        bgType: values.bgType,
+        bgColor: values.bgColor,
+        profileLayout: values.layout,
+        coverImageUrl: values.coverImageUrl,
+        layout: values.layout,
+        title: values.title,
+        titleStyle: values.titleStyle,
+        titleColor: values.titleColor,
+        pageTextColor: values.pageTextColor,
+        buttonVariant: values.buttonVariant,
+        buttonRadius: values.buttonRadius,
+        buttonShadow: values.buttonShadow,
+        buttonColor: values.buttonColor,
+        buttonTextColor: values.buttonTextColor,
+        altTitleFont: values.altTitleFont,
+        stickers: values.stickers,
+        links: MOCK_LINKS,
+        projects: MOCK_PROJECTS,
+      }
+    : null;
+
+  const stickerList = values.stickers.map((sticker, idx) => {
+    const meta = PROGRAMMING_STICKERS.find((s) => s.slug === sticker.id);
+    return (
+      <ProfileSticker
+        key={`${sticker.id}-${idx}`}
+        sticker={sticker}
+        index={idx}
+        brandColor={meta?.brandColor ?? values.accentColor}
+        containerRef={cardRef as React.RefObject<HTMLDivElement | null>}
+        isSelected={selectedIdx === idx}
+        onSelect={(idx: number) => setSelectedIdx(idx)}
+        onUpdate={handleStickerUpdate}
+        onRemove={handleStickerRemove}
+        mode={mode}
+      />
+    );
+  });
+
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl border border-border/40 bg-muted/10 p-6">
+    <div
+      ref={(node) => {
+        setDroppableNodeRef(node);
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }}
+      id={dropId}
+      className={cn(
+        "relative flex min-h-0 flex-1 flex-col rounded-2xl border border-border/40 bg-muted/10",
+        !isStickersMode && "scroll-thin overflow-y-auto p-4",
+        isStickersMode && "scroll-hide overflow-auto",
+        isStickersMode && "bg-[radial-gradient(circle,_color-mix(in_srgb,_currentColor_12%,_transparent)_1px,_transparent_1px)] [background-size:22px_22px]",
+      )}
+      onPointerDown={(e) => {
+        if (!(e.target as HTMLElement).closest("[data-sticker]")) {
+          setSelectedIdx(null);
+        }
+      }}
+      style={
+        isOver
+          ? {
+              boxShadow: `0 0 0 2px ${values.accentColor}80, 0 8px 32px ${values.accentColor}30`,
+              transition: "box-shadow 200ms ease",
+            }
+          : undefined
+      }
+    >
       <SaveBadge status={saveStatus} />
 
-      <div className="relative w-full max-w-[390px] ">
+      {!isStickersMode ? (
+        <div className="flex min-h-0 justify-center py-4">
+          <div style={{ width: 390, zoom: 0.88 }}>
+            {profile && (
+              <ProfilePreview
+                profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
+                projects={MOCK_PROJECTS}
+                links={MOCK_LINKS}
+                githubStats={MOCK_STATS}
+                layout={values.layout as "classic" | "hero"}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        // Wide stage so stickers can be placed freely around the card
         <div
-          ref={(node) => {
-            setNodeRef(node);
-            (
-              containerRef as React.MutableRefObject<HTMLDivElement | null>
-            ).current = node;
-          }}
-          id="profile-card-canvas"
-          className="relative w-full overflow-hidden rounded-2xl"
-          onPointerDown={(e) => {
-            if (!(e.target as HTMLElement).closest("[data-sticker]")) {
-              setSelectedIdx(null);
-            }
-          }}
-          style={{
-            border: `1px solid ${cardBorder}`,
-            fontFamily,
-            boxShadow: isOver
-              ? `0 0 0 2px ${values.accentColor}80, 0 8px 32px ${values.accentColor}30`
-              : undefined,
-            transition: "box-shadow 200ms ease",
-          }}
+          className="flex items-start justify-center py-12"
+          style={{ minWidth: "max(100%, 1100px)", minHeight: "100%" }}
         >
-          <div className="relative h-60 rounded-t-2xl" style={coverBg}>
-            <div
-              className="absolute inset-0 z-20 rounded-t-2xl"
-              style={{
-                background: `linear-gradient(to bottom, transparent 0%, transparent 30%, ${cardBaseColor}00 45%, ${cardBaseColor}88 75%, ${cardBaseColor}ff 100%)`,
-              }}
-            />
-            <div className="absolute -bottom-5 left-4 z-30">
-              <div
-                className="size-[42px] overflow-hidden rounded-full"
-                style={{
-                  background: user?.avatarUrl
-                    ? "transparent"
-                    : `${values.accentColor}25`,
-                  boxShadow: `0 0 0 2px ${values.bgColor}, 0 0 0 3.5px ${cardBorder}`,
-                }}
-              >
-                {user?.avatarUrl ? (
-                  <Image
-                    src={user.avatarUrl}
-                    alt={user.displayName}
-                    width={42}
-                    height={42}
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: textSecond }}
-                    >
-                      {initials}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
           <div
-            className="rounded-b-2xl px-3.5 pb-3.5"
-            style={{ background: cardBg, paddingTop: "30px" }}
+            ref={cardRef}
+            id="stickers-card"
+            className="relative"
+            style={{ zoom: 0.68 }}
           >
-            <div>
-              <p
-                className="text-[13px] font-bold leading-tight"
-                style={{ color: textPrimary }}
-              >
-                {user?.displayName ?? "Tu nombre"}
-              </p>
-              <p
-                className="mt-0.5 text-[11px]"
-                style={{ color: `${values.accentColor}cc` }}
-              >
-                @{user?.username ?? "username"}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                {user?.location && (
-                  <span
-                    className="flex items-center gap-1 text-[10px]"
-                    style={{ color: textMuted }}
-                  >
-                    <MapPin className="size-2.5 shrink-0" />
-                    {user.location}
-                  </span>
-                )}
-                <span
-                  className="flex items-center gap-1 text-[10px]"
-                  style={{ color: `${values.accentColor}80` }}
-                >
-                  <Link2 className="size-2.5 shrink-0" />
-                  devlinks.io/{user?.username ?? "username"}
-                </span>
-              </div>
-              {user?.bio && (
-                <p
-                  className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed"
-                  style={{ color: textSecond }}
-                >
-                  {user.bio}
-                </p>
-              )}
-            </div>
-
-            <div
-              className=" flex items-center gap-2 border-b py-2"
-              style={{ borderColor: dividerColor }}
-            >
-              {MOCK_SOCIAL_SLUGS.map((slug) => (
-                <div
-                  key={slug}
-                  className="flex size-[26px] shrink-0 items-center justify-center rounded-full"
-                  style={socialCircleStyle}
-                >
-                  <Image
-                    src={iconUrl(slug, values.accentColor)}
-                    alt={slug}
-                    width={12}
-                    height={12}
-                    quality={100}
-                    unoptimized
-                    className="size-[12px] object-contain"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-2.5 flex gap-2">
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {MOCK_REPOS.map((repo) => {
-                  const deviconUrl = getDevIconUrl(repo.language);
-                  return (
-                    <div
-                      key={repo.fullName}
-                      className="flex flex-col gap-0.5 rounded-lg px-2.5 py-2"
-                      style={repoStyle}
-                    >
-                      <div className="flex min-w-0 items-center justify-between">
-                        <span
-                          className="truncate text-[10px] font-semibold"
-                          style={{ color: textPrimary }}
-                        >
-                          {repo.fullName}
-                        </span>
-                        <span
-                          className="flex items-center gap-1 text-[9px]"
-                          style={{ color: textMuted }}
-                        >
-                          {repo.language}
-                          {deviconUrl ? (
-                            <Image
-                              src={deviconUrl}
-                              alt={repo.language}
-                              width={11}
-                              height={11}
-                              className="size-[11px] shrink-0 object-contain"
-                            />
-                          ) : (
-                            <span
-                              className="size-1.5 rounded-full"
-                              style={{
-                                background:
-                                  LANG_COLOR[repo.language] ??
-                                  values.accentColor,
-                              }}
-                            />
-                          )}
-                        </span>
-                      </div>
-                      <p
-                        className="truncate text-[9px] leading-relaxed"
-                        style={{ color: textMuted }}
-                      >
-                        {repo.description}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div
-                className="w-px shrink-0"
-                style={{ background: dividerColor }}
+            {profile && (
+              <ProfilePreview
+                profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
+                projects={MOCK_PROJECTS}
+                links={MOCK_LINKS}
+                githubStats={MOCK_STATS}
+                layout={values.layout as "classic" | "hero"}
               />
-
-              <div className="flex w-[96px] shrink-0 flex-col gap-1.5">
-                {MOCK_LINKS.map((link) => (
-                  <div
-                    key={link.label}
-                    className="flex items-center gap-1.5 px-2 py-1.5"
-                    style={{ borderRadius: buttonRadius, ...linkStyle }}
-                  >
-                    <Image
-                      src={iconUrl(link.slug, values.accentColor)}
-                      alt={link.label}
-                      width={12}
-                      height={12}
-                      quality={100}
-                      unoptimized
-                      className="size-[12px] shrink-0 object-contain"
-                    />
-                    <span
-                      className="truncate text-[10px] font-medium"
-                      style={{ color: textPrimary }}
-                    >
-                      {link.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            )}
+            <div
+              className="pointer-events-none absolute inset-0 z-20"
+              style={{ overflow: "visible" }}
+            >
+              {stickerList}
             </div>
           </div>
         </div>
-
-        <div className="absolute inset-0 z-20 pointer-events-none">
-          {values.stickers.map((sticker, idx) => {
-            const meta = PROGRAMMING_STICKERS.find(
-              (s) => s.slug === sticker.id,
-            );
-            return (
-              <ProfileSticker
-                key={`${sticker.id}-${idx}`}
-                sticker={sticker}
-                index={idx}
-                brandColor={meta?.brandColor ?? values.accentColor}
-                containerRef={
-                  containerRef as React.RefObject<HTMLDivElement | null>
-                }
-                isSelected={selectedIdx === idx}
-                onSelect={(idx: number) => setSelectedIdx(idx)}
-                onUpdate={handleStickerUpdate}
-                onRemove={handleStickerRemove}
-              />
-            );
-          })}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

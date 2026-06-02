@@ -77,7 +77,7 @@ export function SchemaDocs() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
+        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left"
       >
         <div className="flex items-center gap-2">
           <BookOpen className="size-4 text-muted-foreground" />

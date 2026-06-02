@@ -3,7 +3,6 @@ export const jwtConfig = {
   refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRY ?? '7d',
 };
 
-/** Convierte valores tipo `7d`, `15m`, `12h` en una fecha de expiración. */
 export function parseDurationToDate(expiry: string): Date {
   const m = expiry.trim().match(/^(\d+)(d|h|m|s)$/);
   if (!m) {

@@ -33,6 +33,18 @@ export type UserPublic = {
   bgColor: string;
   profileLayout: string;
   coverImageUrl: string;
+  layout: string;
+  title: string | null;
+  titleStyle: string;
+  titleColor: string;
+  pageTextColor: string;
+  buttonVariant: string;
+  buttonRadius: number;
+  buttonShadow: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  altTitleFont: boolean;
+  titleFont: string;
   stickers: Prisma.JsonValue | null;
   createdAt: Date;
 };
@@ -71,21 +83,7 @@ export class UserService {
       }
     }
 
-    const data: Partial<{
-      username: string;
-      displayName: string;
-      bio: string;
-      location: string;
-      avatarUrl: string;
-      theme: string;
-      accentColor: string;
-      buttonStyle: string;
-      fontFamily: string;
-      bgType: string;
-      bgColor: string;
-      profileLayout: string;
-      coverImageUrl: string;
-    }> = {};
+    const data: Prisma.UserUpdateInput = {};
 
     if (dto.username !== undefined) data.username = dto.username;
     if (dto.displayName !== undefined) data.displayName = dto.displayName;
@@ -100,6 +98,18 @@ export class UserService {
     if (dto.bgColor !== undefined) data.bgColor = dto.bgColor;
     if (dto.profileLayout !== undefined) data.profileLayout = dto.profileLayout;
     if (dto.coverImageUrl !== undefined) data.coverImageUrl = dto.coverImageUrl;
+    if (dto.layout !== undefined) data.layout = dto.layout;
+    if ('title' in dto) data.title = dto.title ?? null;
+    if (dto.titleStyle !== undefined) data.titleStyle = dto.titleStyle;
+    if (dto.titleColor !== undefined) data.titleColor = dto.titleColor;
+    if (dto.pageTextColor !== undefined) data.pageTextColor = dto.pageTextColor;
+    if (dto.buttonVariant !== undefined) data.buttonVariant = dto.buttonVariant;
+    if (dto.buttonRadius !== undefined) data.buttonRadius = dto.buttonRadius;
+    if (dto.buttonShadow !== undefined) data.buttonShadow = dto.buttonShadow;
+    if (dto.buttonColor !== undefined) data.buttonColor = dto.buttonColor;
+    if (dto.buttonTextColor !== undefined) data.buttonTextColor = dto.buttonTextColor;
+    if (dto.altTitleFont !== undefined) data.altTitleFont = dto.altTitleFont;
+    if (dto.titleFont !== undefined) data.titleFont = dto.titleFont;
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -170,6 +180,17 @@ export class UserService {
       bgColor: user.bgColor,
       profileLayout: user.profileLayout,
       coverImageUrl: user.coverImageUrl,
+      layout: user.layout,
+      title: user.title ?? null,
+      titleStyle: user.titleStyle,
+      titleColor: user.titleColor,
+      pageTextColor: user.pageTextColor,
+      buttonVariant: user.buttonVariant,
+      buttonRadius: user.buttonRadius,
+      buttonShadow: user.buttonShadow,
+      buttonColor: user.buttonColor,
+      buttonTextColor: user.buttonTextColor,
+      altTitleFont: user.altTitleFont,
       stickers: user.stickers ?? null,
       createdAt: user.createdAt,
       links: user.links,
@@ -332,6 +353,18 @@ export class UserService {
         bgColor: user.bgColor,
         profileLayout: user.profileLayout,
         coverImageUrl: user.coverImageUrl,
+        layout: user.layout,
+        title: user.title,
+        titleStyle: user.titleStyle,
+        titleColor: user.titleColor,
+        pageTextColor: user.pageTextColor,
+        buttonVariant: user.buttonVariant,
+        buttonRadius: user.buttonRadius,
+        buttonShadow: user.buttonShadow,
+        buttonColor: user.buttonColor,
+        buttonTextColor: user.buttonTextColor,
+        altTitleFont: user.altTitleFont,
+        titleFont: user.titleFont,
       },
       links: user.links.map((link) => ({
         title: link.title,
@@ -376,6 +409,18 @@ export class UserService {
         if (p.bgColor !== undefined) data.bgColor = p.bgColor;
         if (p.profileLayout !== undefined) data.profileLayout = p.profileLayout;
         if (p.coverImageUrl !== undefined) data.coverImageUrl = p.coverImageUrl;
+        if (p.layout !== undefined) data.layout = p.layout;
+        if ('title' in p) data.title = p.title ?? null;
+        if (p.titleStyle !== undefined) data.titleStyle = p.titleStyle;
+        if (p.titleColor !== undefined) data.titleColor = p.titleColor;
+        if (p.pageTextColor !== undefined) data.pageTextColor = p.pageTextColor;
+        if (p.buttonVariant !== undefined) data.buttonVariant = p.buttonVariant;
+        if (p.buttonRadius !== undefined) data.buttonRadius = p.buttonRadius;
+        if (p.buttonShadow !== undefined) data.buttonShadow = p.buttonShadow;
+        if (p.buttonColor !== undefined) data.buttonColor = p.buttonColor;
+        if (p.buttonTextColor !== undefined) data.buttonTextColor = p.buttonTextColor;
+        if (p.altTitleFont !== undefined) data.altTitleFont = p.altTitleFont;
+        if (p.titleFont !== undefined) data.titleFont = p.titleFont;
 
         await tx.user.update({ where: { id: userId }, data });
       }
@@ -447,6 +492,18 @@ export class UserService {
       bgColor: user.bgColor,
       profileLayout: user.profileLayout,
       coverImageUrl: user.coverImageUrl,
+      layout: user.layout,
+      title: user.title ?? null,
+      titleStyle: user.titleStyle,
+      titleColor: user.titleColor,
+      pageTextColor: user.pageTextColor,
+      buttonVariant: user.buttonVariant,
+      buttonRadius: user.buttonRadius,
+      buttonShadow: user.buttonShadow,
+      buttonColor: user.buttonColor,
+      buttonTextColor: user.buttonTextColor,
+      altTitleFont: user.altTitleFont,
+      titleFont: user.titleFont,
       stickers: user.stickers ?? null,
       createdAt: user.createdAt,
     };

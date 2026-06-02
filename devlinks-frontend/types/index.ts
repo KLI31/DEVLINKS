@@ -17,6 +17,18 @@ export interface UserProfile {
   bgColor: string;
   profileLayout: string;
   coverImageUrl: string;
+  layout: string;
+  title: string | null;
+  titleStyle: string;
+  titleColor: string;
+  pageTextColor: string;
+  buttonVariant: string;
+  buttonRadius: number;
+  buttonShadow: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  altTitleFont: boolean;
+  titleFont: string;
   createdAt: string;
 }
 
@@ -57,6 +69,18 @@ export interface PublicProfile {
   bgColor: string;
   profileLayout: string;
   coverImageUrl: string;
+  layout: string;
+  title: string | null;
+  titleStyle: string;
+  titleColor: string;
+  pageTextColor: string;
+  buttonVariant: string;
+  buttonRadius: number;
+  buttonShadow: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  altTitleFont: boolean;
+  titleFont: string;
   stickers: PlacedSticker[] | null;
   links: {
     id: string;
@@ -138,6 +162,18 @@ export interface UpdateProfilePayload {
   bgColor?: string;
   profileLayout?: string;
   coverImageUrl?: string;
+  layout?: string;
+  title?: string | null;
+  titleStyle?: string;
+  titleColor?: string;
+  pageTextColor?: string;
+  buttonVariant?: string;
+  buttonRadius?: number;
+  buttonShadow?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  altTitleFont?: boolean;
+  titleFont?: string;
 }
 
 export interface GithubRepo {

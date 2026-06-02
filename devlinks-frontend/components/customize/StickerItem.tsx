@@ -23,7 +23,7 @@ export function StickerItem({ sticker, disabled }: StickerItemProps) {
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    cursor: disabled ? "not-allowed" : isDragging ? "grabbing" : "grab",
+    cursor: disabled ? "not-allowed" : isDragging ? "grabbing" : "pointer",
     opacity: isDragging ? 0 : disabled ? 0.45 : 1,
     background: `${brandColor}15`,
     border: `1px solid ${brandColor}35`,

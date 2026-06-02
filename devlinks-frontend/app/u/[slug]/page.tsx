@@ -85,7 +85,7 @@ export default async function PublicProfilePage({
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center justify-start px-4 py-16"
+      className="flex min-h-screen flex-col items-center justify-start overflow-x-hidden px-4 py-16"
       style={{ background: pageBg }}
     >
       <PublicProfileCard

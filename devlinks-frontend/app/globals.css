@@ -264,6 +264,14 @@
   scrollbar-color: #cbd5e1 transparent;
 }
 
+.scroll-hide::-webkit-scrollbar {
+  display: none;
+}
+.scroll-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 @keyframes shine {
   0% {
     background-position: 200% center;

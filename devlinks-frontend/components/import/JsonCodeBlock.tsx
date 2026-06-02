@@ -138,7 +138,7 @@ export function JsonCodeBlock({ data, className, readOnly = true }: JsonCodeBloc
           variant="ghost"
           size="xs"
           onClick={handleCopy}
-          className="h-6 gap-1 text-xs"
+          className="h-6 cursor-pointer gap-1 text-xs"
         >
           {copied ? (
             <>

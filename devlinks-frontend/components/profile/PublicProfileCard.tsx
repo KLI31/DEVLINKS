@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import {
   MapPin,
-  Link2,
   Star,
   ChevronRight,
   ExternalLink,
@@ -30,19 +29,11 @@ import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 import { getProfileUrl } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-const BUTTON_RADIUS: Record<string, string> = {
-  "rounded-fill": "8px",
-  "sharp-fill": "2px",
-  "pill-fill": "9999px",
-  "rounded-outline": "8px",
-  "sharp-outline": "2px",
-  "pill-outline": "9999px",
-};
-
-const IS_OUTLINE: Record<string, boolean> = {
-  "rounded-outline": true,
-  "sharp-outline": true,
-  "pill-outline": true,
+const BUTTON_SHADOW_CSS: Record<string, string> = {
+  none: "none",
+  soft: "0 2px 8px rgba(0,0,0,0.18)",
+  strong: "0 4px 16px rgba(0,0,0,0.38)",
+  hard: "2px 3px 0px rgba(0,0,0,0.55)",
 };
 
 const FONT_CSS: Record<string, string> = {
@@ -135,14 +126,26 @@ export function PublicProfileCard({
     }
   };
 
+  const isHero = profile.layout === "hero";
+  const isGradient = profile.bgType === "gradient";
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
   const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
   const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
+  const textSecondary = isLight ? "rgba(0,0,0,0.58)" : "rgba(255,255,255,0.62)";
   const dividerColor = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
 
   const fontFamily = FONT_CSS[profile.fontFamily] ?? FONT_CSS["jetbrains-mono"];
-  const buttonRadius = BUTTON_RADIUS[profile.buttonStyle] ?? "8px";
-  const isOutline = IS_OUTLINE[profile.buttonStyle] ?? false;
+  const titleFontFamily = profile.altTitleFont
+    ? (FONT_CSS[(profile as unknown as Record<string, string>).titleFont] ?? FONT_CSS["playfair"])
+    : fontFamily;
+
+  const bRadius = `${profile.buttonRadius ?? 8}px`;
+  const bVariant = profile.buttonVariant ?? "solid";
+  const isOutline = bVariant === "outline";
+  const isGlass = bVariant === "glass";
+  const bColor = profile.buttonColor ?? profile.accentColor;
+  const bTextColor = profile.buttonTextColor ?? textPrimary;
+  const bShadow = BUTTON_SHADOW_CSS[profile.buttonShadow ?? "none"] ?? "none";
 
   const cardBg =
     profile.bgType === "gradient"
@@ -166,13 +169,23 @@ export function PublicProfileCard({
 
   const linkStyle = isOutline
     ? {
-        border: `1px solid ${profile.accentColor}55`,
+        border: `1px solid ${bColor}55`,
         background: "transparent",
+        boxShadow: bShadow,
       }
-    : {
-        border: `1px solid ${profile.accentColor}28`,
-        background: `${profile.accentColor}0d`,
-      };
+    : isGlass
+      ? {
+          border: `1px solid ${bColor}30`,
+          background: `${bColor}18`,
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          boxShadow: bShadow,
+        }
+      : {
+          border: `1px solid ${bColor}28`,
+          background: `${bColor}0d`,
+          boxShadow: bShadow,
+        };
 
   const repoStyle = {
     border: `1px solid ${profile.accentColor}20`,
@@ -234,11 +247,12 @@ export function PublicProfileCard({
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[480px] rounded-[30px]"
+      className="relative mx-auto w-full max-w-[480px] rounded-[30px] isolate"
       style={{
         fontFamily,
         boxShadow:
           "0 12px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.03)",
+        background: isGradient ? cardBg : undefined,
       }}
     >
       {!hideShare && (
@@ -258,104 +272,75 @@ export function PublicProfileCard({
         </button>
       )}
 
-      <div
-        ref={coverRef}
-        className="relative w-full overflow-hidden rounded-t-[30px]"
-        style={{ height: 400 }}
-      >
-        <div className="absolute inset-0" style={{ background: cardBg }} />
-
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            ...coverBg,
-            opacity: coverOpacity,
-            scale: coverScale,
-            filter: coverBlurFilter,
-
-            WebkitMaskImage: `linear-gradient(to bottom,
-              #000 0%,
-              #000 45%,
-              rgba(0,0,0,0.92) 55%,
-              rgba(0,0,0,0.72) 65%,
-              rgba(0,0,0,0.45) 75%,
-              rgba(0,0,0,0.18) 85%,
-              rgba(0,0,0,0.05) 92%,
-              transparent 100%
-            )`,
-            maskImage: `linear-gradient(to bottom,
-              #000 0%,
-              #000 45%,
-              rgba(0,0,0,0.92) 55%,
-              rgba(0,0,0,0.72) 65%,
-              rgba(0,0,0,0.45) 75%,
-              rgba(0,0,0,0.18) 85%,
-              rgba(0,0,0,0.05) 92%,
-              transparent 100%
-            )`,
-          }}
-        />
-
+      {isHero && (
         <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(to right, ${profile.bgColor}4d 0%, transparent 22%, transparent 78%, ${profile.bgColor}4d 100%)`,
-          }}
-        />
+          ref={coverRef}
+          className="relative w-full overflow-hidden rounded-t-[30px]"
+          style={{ height: 400 }}
+        >
+          {!isGradient && (
+            <div className="absolute inset-0" style={{ background: cardBg }} />
+          )}
 
-        {stickers.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 z-20">
-            {stickers.map((sticker, idx) => {
-              const meta = PROGRAMMING_STICKERS.find(
-                (s) => s.slug === sticker.id,
-              );
-              const color = meta?.brandColor ?? profile.accentColor;
-              const size = Math.round(56 * (sticker.scale ?? 1));
-              return (
-                <div
-                  key={`${sticker.id}-${idx}`}
-                  className="absolute"
-                  style={{
-                    left: `${sticker.x}%`,
-                    top: `${sticker.y}%`,
-                    width: size,
-                    height: size,
-                    marginLeft: -size / 2,
-                    marginTop: -size / 2,
-                    transform: `rotate(${sticker.rotation}deg)`,
-                  }}
-                >
-                  <div
-                    className="absolute rounded-xl bg-white"
-                    style={{
-                      inset: -5,
-                      zIndex: -1,
-                      boxShadow: "0 3px 12px rgba(0,0,0,0.28)",
-                    }}
-                  />
-                  <Image
-                    src={iconUrl(sticker.id, color)}
-                    alt={sticker.id}
-                    width={size}
-                    height={size}
-                    unoptimized
-                    className="size-full select-none object-contain"
-                    draggable={false}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              ...coverBg,
+              opacity: coverOpacity,
+              scale: coverScale,
+              filter: coverBlurFilter,
+              ...(isGradient && {
+                WebkitMaskImage:
+                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
+                maskImage:
+                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
+              }),
+            }}
+          />
+
+          {!isGradient && (
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(to bottom,
+                  transparent 0%,
+                  transparent 45%,
+                  ${profile.bgColor}14 55%,
+                  ${profile.bgColor}47 65%,
+                  ${profile.bgColor}8C 75%,
+                  ${profile.bgColor}D1 85%,
+                  ${profile.bgColor}F2 92%,
+                  ${profile.bgColor} 100%
+                )`,
+              }}
+            />
+          )}
+
+          {!isGradient && (
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(to right, ${profile.bgColor}4d 0%, transparent 22%, transparent 78%, ${profile.bgColor}4d 100%)`,
+              }}
+            />
+          )}
+        </div>
+      )}
 
       <div
-        className="px-6 pb-8 pt-0 rounded-b-[30px]"
-        style={{ background: cardBg }}
+        className={
+          isHero
+            ? "px-6 pb-8 pt-0 rounded-b-[30px]"
+            : "px-6 pb-8 pt-0 rounded-[30px]"
+        }
+        style={{ background: isGradient ? "transparent" : cardBg }}
       >
         <div
           className="relative z-10 flex flex-col items-center pb-5 pt-0"
-          style={{ marginTop: "-36px" }}
+          style={{
+            marginTop: isHero ? "-36px" : "0",
+            paddingTop: isHero ? "0" : "32px",
+          }}
         >
           <div
             className="size-[72px] overflow-hidden rounded-full"
@@ -389,7 +374,7 @@ export function PublicProfileCard({
 
           <p
             className="mt-2.5 text-[13px] font-semibold"
-            style={{ color: textPrimary }}
+            style={{ color: textPrimary, fontFamily: titleFontFamily }}
           >
             {profile.displayName}
           </p>
@@ -400,31 +385,23 @@ export function PublicProfileCard({
             @{profile.username}
           </p>
 
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            {profile.location && (
-              <span
-                className="flex items-center gap-1 text-[11px]"
-                style={{ color: textMuted }}
-              >
-                <MapPin className="size-3 shrink-0" />
+          {profile.location && (
+            <div className="mt-1.5 flex items-center justify-center gap-1">
+              <MapPin className="size-3 shrink-0" style={{ color: textSecondary }} />
+              <span className="text-[11px]" style={{ color: textSecondary }}>
                 {profile.location}
               </span>
-            )}
-            <span
-              className="flex items-center gap-1 text-[11px]"
-              style={{ color: `${profile.accentColor}70` }}
-            >
-              <Link2 className="size-3 shrink-0" />
-              devlinks.io/{profile.username}
-            </span>
+            </div>
+          )}
 
-            <span
-              className="max-w-sm text-center text-sm font-semibold"
-              style={{ color: textMuted }}
+          {profile.bio && (
+            <p
+              className="mt-2 max-w-xs text-center text-[12px] leading-relaxed"
+              style={{ color: textSecondary }}
             >
               {profile.bio}
-            </span>
-          </div>
+            </p>
+          )}
 
           {primaryLinks.length > 0 && (
             <div className="mt-3 flex flex-wrap justify-center gap-3">
@@ -509,34 +486,36 @@ export function PublicProfileCard({
                 </span>
               )}
             </div>
-            <div className="flex justify-center gap-[3px]">
-              {heatmapWeeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col gap-[3px]">
-                  {Array.from({ length: 7 }).map((_, di) => {
-                    const day = week[di] ?? null;
-                    const level = day?.level ?? -1;
-                    return (
-                      <div
-                        key={di}
-                        title={
-                          day
-                            ? `${day.date}: ${day.count} contributions`
-                            : undefined
-                        }
-                        style={{
-                          width: 11,
-                          height: 11,
-                          borderRadius: 3,
-                          background:
-                            level < 0
-                              ? `${profile.accentColor}0a`
-                              : `${profile.accentColor}${HEATMAP_ALPHA[Math.max(0, level)]}`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
+            <div className="scroll-hide overflow-x-auto">
+              <div className="flex justify-center gap-[3px]">
+                {heatmapWeeks.map((week, wi) => (
+                  <div key={wi} className="flex flex-col gap-[3px]">
+                    {Array.from({ length: 7 }).map((_, di) => {
+                      const day = week[di] ?? null;
+                      const level = day?.level ?? -1;
+                      return (
+                        <div
+                          key={di}
+                          title={
+                            day
+                              ? `${day.date}: ${day.count} contributions`
+                              : undefined
+                          }
+                          style={{
+                            width: 11,
+                            height: 11,
+                            borderRadius: 3,
+                            background:
+                              level < 0
+                                ? `${profile.accentColor}0a`
+                                : `${profile.accentColor}${HEATMAP_ALPHA[Math.max(0, level)]}`,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="mt-2 flex items-center justify-end gap-1.5">
               <span className="text-[8px]" style={{ color: textMuted }}>
@@ -679,11 +658,11 @@ export function PublicProfileCard({
                         : "min-h-[52px] items-center gap-3 px-4 py-3",
                     )}
                     style={{
-                      borderRadius: buttonRadius,
+                      borderRadius: bRadius,
                       ...(isFeatured
                         ? {
-                            border: `1px solid ${profile.accentColor}35`,
-                            background: `${profile.accentColor}08`,
+                            border: `1px solid ${bColor}35`,
+                            background: `${bColor}08`,
                           }
                         : linkStyle),
                     }}
@@ -705,8 +684,8 @@ export function PublicProfileCard({
                         height={120}
                         className="h-[120px] w-full object-cover"
                         style={{
-                          borderTopLeftRadius: buttonRadius,
-                          borderTopRightRadius: buttonRadius,
+                          borderTopLeftRadius: bRadius,
+                          borderTopRightRadius: bRadius,
                         }}
                         unoptimized
                       />
@@ -738,13 +717,15 @@ export function PublicProfileCard({
                       ) : null}
                       <span
                         className="flex-1 break-words text-center text-[12px] font-medium leading-snug"
-                        style={{ color: textPrimary }}
+                        style={{ color: isFeatured ? textPrimary : bTextColor }}
                       >
                         {link.title}
                       </span>
                       <ChevronRight
                         className="size-4 shrink-0"
-                        style={{ color: textMuted }}
+                        style={{
+                          color: isFeatured ? textMuted : `${bTextColor}80`,
+                        }}
                       />
                     </div>
                   </motion.a>
@@ -843,7 +824,7 @@ export function PublicProfileCard({
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm cursor-pointer font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
               style={{ background: profile.accentColor }}
             >
               {copied ? (
@@ -856,6 +837,51 @@ export function PublicProfileCard({
           </div>
         </DialogContent>
       </Dialog>
+
+      {stickers.length > 0 && (
+        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden sm:overflow-visible">
+          {stickers.map((sticker, idx) => {
+            const meta = PROGRAMMING_STICKERS.find(
+              (s) => s.slug === sticker.id,
+            );
+            const color = meta?.brandColor ?? profile.accentColor;
+            const size = Math.round(56 * (sticker.scale ?? 1));
+            return (
+              <div
+                key={`${sticker.id}-${idx}`}
+                className="absolute"
+                style={{
+                  left: `${sticker.x}%`,
+                  top: `${sticker.y}%`,
+                  width: size,
+                  height: size,
+                  marginLeft: -size / 2,
+                  marginTop: -size / 2,
+                  transform: `rotate(${sticker.rotation}deg)`,
+                }}
+              >
+                <div
+                  className="absolute rounded-xl bg-white"
+                  style={{
+                    inset: -5,
+                    zIndex: -1,
+                    boxShadow: "0 3px 12px rgba(0,0,0,0.28)",
+                  }}
+                />
+                <Image
+                  src={iconUrl(sticker.id, color)}
+                  alt={sticker.id}
+                  width={size}
+                  height={size}
+                  unoptimized
+                  className="size-full select-none object-contain"
+                  draggable={false}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

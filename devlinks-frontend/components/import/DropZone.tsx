@@ -80,6 +80,7 @@ export function DropZone({ onFileSelect, onClear, error, fileName }: DropZonePro
               size="icon-xs"
               onClick={onClear}
               aria-label="Quitar archivo"
+              className="cursor-pointer"
             >
               <X className="size-3" />
             </Button>

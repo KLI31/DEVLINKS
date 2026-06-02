@@ -49,7 +49,7 @@ export function LinkLayoutModal({
             type="button"
             onClick={() => handleSelect("classic")}
             className={cn(
-              "flex items-start gap-4 rounded-2xl border p-4 text-left transition-all",
+              "flex cursor-pointer items-start gap-4 rounded-2xl border p-4 text-left transition-all",
               selected === "classic"
                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                 : "border-border/60 hover:border-primary/30 hover:bg-muted/30",
@@ -85,7 +85,7 @@ export function LinkLayoutModal({
             type="button"
             onClick={() => handleSelect("featured")}
             className={cn(
-              "flex items-start gap-4 rounded-2xl border p-4 text-left transition-all",
+              "flex cursor-pointer items-start gap-4 rounded-2xl border p-4 text-left transition-all",
               selected === "featured"
                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                 : "border-border/60 hover:border-primary/30 hover:bg-muted/30",

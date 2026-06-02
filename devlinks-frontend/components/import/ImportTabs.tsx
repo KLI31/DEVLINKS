@@ -13,7 +13,7 @@ export function ImportTabs({ activeTab, onTabChange }: ImportTabsProps) {
         type="button"
         onClick={() => onTabChange("editor")}
         className={cn(
-          "flex items-center gap-2 border-b-2 px-1 pb-2 text-sm font-medium transition-colors",
+          "flex cursor-pointer items-center gap-2 border-b-2 px-1 pb-2 text-sm font-medium transition-colors",
           activeTab === "editor"
             ? "border-primary text-foreground"
             : "border-transparent text-muted-foreground hover:text-foreground",
@@ -26,7 +26,7 @@ export function ImportTabs({ activeTab, onTabChange }: ImportTabsProps) {
         type="button"
         onClick={() => onTabChange("file")}
         className={cn(
-          "flex items-center gap-2 border-b-2 px-1 pb-2 text-sm font-medium transition-colors",
+          "flex cursor-pointer items-center gap-2 border-b-2 px-1 pb-2 text-sm font-medium transition-colors",
           activeTab === "file"
             ? "border-primary text-foreground"
             : "border-transparent text-muted-foreground hover:text-foreground",

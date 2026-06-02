@@ -18,6 +18,7 @@ interface ProfileStickerProps {
   onSelect: (index: number) => void;
   onUpdate: (index: number, updated: PlacedSticker) => void;
   onRemove: (index: number) => void;
+  mode?: "preview" | "stickers";
 }
 
 export function ProfileSticker({
@@ -29,15 +30,15 @@ export function ProfileSticker({
   onSelect,
   onUpdate,
   onRemove,
+  mode = "preview",
 }: ProfileStickerProps) {
   const [isRemoving, setIsRemoving] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{
-    isDragging: boolean;
     offsetX: number;
     offsetY: number;
   }>({
-    isDragging: false,
     offsetX: 0,
     offsetY: 0,
   });
@@ -50,7 +51,7 @@ export function ProfileSticker({
     e.stopPropagation();
     const el = e.currentTarget as HTMLDivElement;
     el.setPointerCapture(e.pointerId);
-    dragRef.current.isDragging = true;
+    setIsDragging(true);
     dragRef.current.offsetX = e.clientX;
     dragRef.current.offsetY = e.clientY;
     onSelect(index);
@@ -58,7 +59,7 @@ export function ProfileSticker({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!dragRef.current.isDragging) return;
+      if (!isDragging) return;
       const container = containerRef.current;
       if (!container) return;
 
@@ -69,20 +70,22 @@ export function ProfileSticker({
       const x = ((clientX - rect.left) / rect.width) * 100;
       const y = ((clientY - rect.top) / rect.height) * 100;
 
+      const min = mode === "stickers" ? -200 : 2;
+      const max = mode === "stickers" ? 300 : 98;
       onUpdate(index, {
         ...sticker,
-        x: Math.round(Math.max(2, Math.min(98, x)) * 10) / 10,
-        y: Math.round(Math.max(2, Math.min(98, y)) * 10) / 10,
+        x: Math.round(Math.max(min, Math.min(max, x)) * 10) / 10,
+        y: Math.round(Math.max(min, Math.min(max, y)) * 10) / 10,
       });
 
       dragRef.current.offsetX = clientX;
       dragRef.current.offsetY = clientY;
     },
-    [containerRef, onUpdate, sticker],
+    [containerRef, onUpdate, sticker, index, isDragging, mode],
   );
 
   const handlePointerUp = useCallback(() => {
-    dragRef.current.isDragging = false;
+    setIsDragging(false);
   }, []);
 
   const handleScalePointerDown = useCallback((e: React.PointerEvent) => {
@@ -144,7 +147,7 @@ export function ProfileSticker({
         marginLeft: -(size / 2),
         marginTop: -(size / 2),
         zIndex: 10,
-        cursor: dragRef.current.isDragging ? "grabbing" : "move",
+        cursor: isDragging ? "grabbing" : "move",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

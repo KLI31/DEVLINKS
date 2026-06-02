@@ -226,7 +226,7 @@ export function LinkFormModal({
                   onClick={() =>
                     setValue("previewImage", undefined, { shouldDirty: true })
                   }
-                  className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white transition-colors hover:bg-black/80"
+                  className="absolute right-2 top-2 cursor-pointer rounded-full bg-black/60 px-2 py-1 text-[10px] text-white transition-colors hover:bg-black/80"
                 >
                   Quitar
                 </button>
@@ -256,7 +256,7 @@ export function LinkFormModal({
               type="button"
               onClick={() => setShowPicker((s) => !s)}
               className={cn(
-                "flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors",
+                "flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors",
                 showPicker
                   ? "border-primary bg-primary/5"
                   : "border-border bg-background hover:bg-muted",
@@ -314,7 +314,7 @@ export function LinkFormModal({
             <button
               type="button"
               onClick={() => setLayoutModalOpen(true)}
-              className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-muted"
+              className="flex cursor-pointer items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-muted"
             >
               <span className="flex items-center gap-2 text-muted-foreground">
                 <LayoutTemplate className="size-4" />
@@ -328,7 +328,7 @@ export function LinkFormModal({
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="flex-1 cursor-pointer"
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
@@ -336,7 +336,7 @@ export function LinkFormModal({
             </Button>
             <Button
               type="submit"
-              className="flex-1"
+              className="flex-1 cursor-pointer"
               disabled={isSubmitting}
             >
               {isSubmitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}

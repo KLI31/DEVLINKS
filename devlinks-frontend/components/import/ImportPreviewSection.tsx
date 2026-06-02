@@ -71,7 +71,7 @@ export function ImportPreviewSection({
           variant="outline"
           onClick={onCancel}
           disabled={isImporting}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           <RotateCcw className="size-4" />
           Cancelar
@@ -80,7 +80,7 @@ export function ImportPreviewSection({
           type="button"
           onClick={onApply}
           disabled={isImporting}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           <CheckCircle className="size-4" />
           {isImporting ? "Importando..." : "Aplicar importación"}

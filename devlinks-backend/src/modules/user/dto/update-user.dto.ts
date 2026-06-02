@@ -1,13 +1,18 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
 import {
+  IsBoolean,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
 } from 'class-validator';
 
 const VALID_THEMES = ['dark', 'light', 'midnight', 'ocean', 'rose'] as const;
@@ -19,6 +24,9 @@ const VALID_BUTTON_STYLES = [
   'pill-outline',
   'sharp-outline',
 ] as const;
+const VALID_BUTTON_VARIANTS = ['solid', 'glass', 'outline'] as const;
+const VALID_BUTTON_SHADOWS = ['none', 'soft', 'strong', 'hard'] as const;
+const VALID_TITLE_STYLES = ['text', 'logo'] as const;
 const VALID_FONTS = [
   'inter',
   'poppins',
@@ -31,8 +39,9 @@ const VALID_FONTS = [
   'outfit',
   'dm-sans',
 ] as const;
-const VALID_BG_TYPES = ['flat', 'gradient'] as const;
+const VALID_BG_TYPES = ['flat', 'gradient', 'fill', 'blur', 'pattern', 'image', 'video'] as const;
 const VALID_LAYOUTS = ['classic', 'cover'] as const;
+const VALID_LAYOUTS_V2 = ['classic', 'hero'] as const;
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
@@ -104,4 +113,74 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @MaxLength(100)
   location: string;
+
+  // ── New customization fields ────────────────────────────
+  @IsString()
+  @IsOptional()
+  @IsIn(VALID_LAYOUTS_V2)
+  layout: string;
+
+  @IsOptional()
+  @ValidateIf((o) => o.title !== null)
+  @IsString()
+  @MaxLength(100)
+  title: string | null;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(VALID_TITLE_STYLES)
+  titleStyle: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'titleColor debe ser un color hex válido (#rrggbb)',
+  })
+  titleColor: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'pageTextColor debe ser un color hex válido (#rrggbb)',
+  })
+  pageTextColor: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(VALID_BUTTON_VARIANTS)
+  buttonVariant: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(9999)
+  buttonRadius: number;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(VALID_BUTTON_SHADOWS)
+  buttonShadow: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'buttonColor debe ser un color hex válido (#rrggbb)',
+  })
+  buttonColor: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'buttonTextColor debe ser un color hex válido (#rrggbb)',
+  })
+  buttonTextColor: string;
+
+  @IsBoolean()
+  @IsOptional()
+  altTitleFont: boolean;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(VALID_FONTS)
+  titleFont: string;
 }

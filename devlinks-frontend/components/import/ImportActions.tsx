@@ -21,7 +21,7 @@ export function ImportActions({
         variant="outline"
         size="xs"
         onClick={onLoadExample}
-        className="gap-1.5 text-xs"
+        className="cursor-pointer gap-1.5 text-xs"
       >
         <FileJson className="size-3.5" />
         Ver ejemplo
@@ -32,7 +32,7 @@ export function ImportActions({
           variant="outline"
           size="xs"
           onClick={onLoadCurrent}
-          className="gap-1.5 text-xs"
+          className="cursor-pointer gap-1.5 text-xs"
         >
           <User className="size-3.5" />
           Usar perfil actual
@@ -43,7 +43,7 @@ export function ImportActions({
         variant="ghost"
         size="xs"
         onClick={onClear}
-        className="gap-1.5 text-xs"
+        className="cursor-pointer gap-1.5 text-xs"
       >
         <RotateCcw className="size-3.5" />
         Restablecer

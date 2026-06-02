@@ -43,7 +43,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             variant="ghost"
             size="sm"
             onClick={() => onChange(undefined)}
-            className="gap-1 text-muted-foreground"
+            className="cursor-pointer gap-1 text-muted-foreground"
           >
             <X className="size-3.5" />
             Quitar
@@ -66,7 +66,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 transition={{ duration: 0.15 }}
                 onClick={() => onChange(isSelected ? undefined : platform.slug)}
                 className={cn(
-                  "group relative flex flex-col items-center gap-1 rounded-lg border p-2 transition-colors",
+                  "group relative flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 transition-colors",
                   isSelected
                     ? "border-primary bg-primary/10"
                     : "border-border/60 bg-muted/30 hover:border-border hover:bg-muted",

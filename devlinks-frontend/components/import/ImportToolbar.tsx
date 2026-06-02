@@ -32,7 +32,7 @@ export function ImportToolbar({
           variant="outline"
           size="sm"
           onClick={onValidate}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           <Play className="size-4" />
           Validar JSON
@@ -42,7 +42,7 @@ export function ImportToolbar({
           size="sm"
           onClick={onImport}
           disabled={isImporting}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           <Upload className="size-4" />
           {isImporting ? "Importando..." : "Importar"}
@@ -53,7 +53,7 @@ export function ImportToolbar({
             variant="secondary"
             size="sm"
             onClick={onDownload}
-            className="gap-2"
+            className="cursor-pointer gap-2"
           >
             <Download className="size-4" />
             Descargar JSON

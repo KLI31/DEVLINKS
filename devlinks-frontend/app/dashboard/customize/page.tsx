@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { ChevronLeft } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { AppearancePanel } from "@/components/customize/AppearancePanel";
 import { CustomizeCanvas } from "@/components/customize/CustomizeCanvas";
-import { StickersPanel } from "@/components/customize/StickersPanel";
+import { StickersFloatingPanel } from "@/components/customize/StickersFloatingPanel";
 import { useCustomize } from "@/hooks/useCustomize";
 import { iconUrl } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 interface ActiveSticker {
@@ -28,6 +31,9 @@ export default function CustomizePage() {
     null,
   );
 
+  const searchParams = useSearchParams();
+  const isStickersMode = searchParams.get("section") === "stickers";
+
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current as {
       slug: string;
@@ -40,24 +46,32 @@ export default function CustomizePage() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveSticker(null);
     const { active, over } = event;
-    if (!over || over.id !== "profile-card-canvas") return;
+    if (!over) return;
+
+    const dropId = over.id as string;
+    if (dropId !== "profile-card-canvas" && dropId !== "stickers-canvas")
+      return;
 
     const stickerSlug = active.id as string;
     const delta = event.delta;
 
-    const canvas = document.getElementById("profile-card-canvas");
-    if (!canvas) return;
+    // Use the card element as reference so stored coords are card-relative,
+    // matching how PublicProfileCard renders stickers (left/top as % of card).
+    const refEl = isStickersMode
+      ? document.getElementById("stickers-card")
+      : document.getElementById("profile-card-canvas");
+    if (!refEl) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x =
-      ((event.activatorEvent as PointerEvent).clientX + delta.x - rect.left) /
-      rect.width;
-    const y =
-      ((event.activatorEvent as PointerEvent).clientY + delta.y - rect.top) /
-      rect.height;
+    const rect = refEl.getBoundingClientRect();
+    const pointerX = (event.activatorEvent as PointerEvent).clientX + delta.x;
+    const pointerY = (event.activatorEvent as PointerEvent).clientY + delta.y;
 
-    const clampedX = Math.max(0.05, Math.min(0.95, x));
-    const clampedY = Math.max(0.05, Math.min(0.95, y));
+    // rect dimensions already account for CSS zoom, same space as clientX/Y.
+    const x = (pointerX - rect.left) / rect.width;
+    const y = (pointerY - rect.top) / rect.height;
+
+    const clampedX = Math.max(-2.0, Math.min(3.0, x));
+    const clampedY = Math.max(-2.0, Math.min(3.0, y));
 
     if (values.stickers.length >= 8) return;
 
@@ -83,19 +97,50 @@ export default function CustomizePage() {
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full min-h-0 gap-6 overflow-hidden">
-        <AppearancePanel
-          values={values}
-          update={update}
-          githubUsername={user?.githubUsername}
-        />
-        <CustomizeCanvas
-          values={values}
-          user={user}
-          saveStatus={saveStatus}
-          onUpdateStickers={updateStickers}
-        />
-        <StickersPanel placedCount={values.stickers.length} />
+      <div className={cn(
+        "flex h-full min-h-0 gap-6",
+        isStickersMode ? "overflow-auto" : "overflow-hidden"
+      )}>
+        {!isStickersMode && (
+          <AppearancePanel
+            values={values}
+            update={update}
+            userDisplayName={user?.displayName}
+            userAvatarUrl={user?.avatarUrl}
+          />
+        )}
+
+        <div className={cn(
+          "relative flex min-h-0 flex-col",
+          isStickersMode ? "flex-1 overflow-auto" : "flex-1"
+        )}>
+          {isStickersMode && (
+            <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+              <a
+                href="?"
+                className="flex items-center gap-1 rounded-lg border border-border/50 bg-card/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm transition-colors hover:bg-muted/50 cursor-pointer"
+              >
+                <ChevronLeft className="size-3.5" />
+                Volver
+              </a>
+              <span className="text-xs font-semibold text-foreground">
+                ✨ Stickers
+              </span>
+            </div>
+          )}
+
+          <CustomizeCanvas
+            values={values}
+            user={user}
+            saveStatus={saveStatus}
+            onUpdateStickers={updateStickers}
+            mode={isStickersMode ? "stickers" : "preview"}
+          />
+
+          {isStickersMode && (
+            <StickersFloatingPanel placedCount={values.stickers.length} />
+          )}
+        </div>
       </div>
 
       <DragOverlay dropAnimation={null}>

@@ -208,7 +208,7 @@ export function LinkCard({ link }: LinkCardProps) {
               <button
                 type="button"
                 onClick={handleTitleEdit}
-                className="shrink-0 opacity-0 text-muted-foreground/60 transition-all group-hover:opacity-100 hover:text-primary"
+                className="shrink-0 cursor-pointer opacity-0 text-muted-foreground/60 transition-all group-hover:opacity-100 hover:text-primary"
                 aria-label="Editar título"
               >
                 <Pencil className="size-3" />
@@ -240,7 +240,7 @@ export function LinkCard({ link }: LinkCardProps) {
               <button
                 type="button"
                 onClick={handleUrlEdit}
-                className="shrink-0 opacity-0 text-muted-foreground/60 transition-all group-hover:opacity-100 hover:text-primary"
+                className="shrink-0 cursor-pointer opacity-0 text-muted-foreground/60 transition-all group-hover:opacity-100 hover:text-primary"
                 aria-label="Editar URL"
               >
                 <Pencil className="size-3" />
@@ -253,7 +253,7 @@ export function LinkCard({ link }: LinkCardProps) {
           <button
             type="button"
             onClick={() => setLayoutModalOpen(true)}
-            className="flex items-center rounded-md px-1.5 py-1 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
+            className="flex cursor-pointer items-center rounded-md px-1.5 py-1 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Cambiar layout"
             title={link.layout === "featured" ? "Featured" : "Classic"}
           >
@@ -280,7 +280,7 @@ export function LinkCard({ link }: LinkCardProps) {
           onClick={handleDelete}
           disabled={isDeleting}
           aria-label="Eliminar link"
-          className="rounded-md p-1.5 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="cursor-pointer rounded-md p-1.5 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
           {isDeleting ? (
             <Loader2 className="size-4 animate-spin" />

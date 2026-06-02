@@ -14,17 +14,14 @@ async function getServerCookieHeader(): Promise<Record<string, string>> {
 }
 
 async function tryRefresh(): Promise<boolean> {
+  // Token refresh is handled by proxy.ts before SSR. Calling it server-side
+  // would consume the refresh token (rotation) without delivering new cookies
+  // to the browser, causing the client-side refresh to fail with a revoked token.
+  if (typeof window === "undefined") return false;
   try {
-    const isServer = typeof window === "undefined";
-    const url = isServer
-      ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/auth/refresh`
-      : "/api/auth/refresh";
-
-    const serverCookies = isServer ? await getServerCookieHeader() : {};
-    const res = await fetch(url, {
+    const res = await fetch("/api/auth/refresh", {
       method: "POST",
       credentials: "include",
-      headers: serverCookies,
     });
     return res.ok;
   } catch {

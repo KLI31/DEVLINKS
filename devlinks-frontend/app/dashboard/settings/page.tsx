@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AvatarUpload } from "@/components/settings/avatarUpload";
 import type { AvatarUploadResult } from "@/components/settings/avatarUploadModal";
-import { User, Shield, Save, MapPin, Loader2 } from "lucide-react";
+import { User, Shield, Save, MapPin, Loader2, RefreshCw } from "lucide-react";
 import { userApi } from "@/lib/api/user.api";
 import { useNotifications } from "@/hooks/use-notifications";
 
@@ -26,9 +26,6 @@ export default function SettingsPage() {
   });
 
   const [locationLoading, setLocationLoading] = useState(false);
-  const [locationSuggestion, setLocationSuggestion] = useState<string | null>(
-    null,
-  );
 
   const [accountForm, setAccountForm] = useState({
     email: user?.email || "",
@@ -92,25 +89,35 @@ export default function SettingsPage() {
     }
   };
 
-  const detectLocation = async () => {
+  const detectLocation = async (silent = false) => {
     setLocationLoading(true);
-    setLocationSuggestion(null);
     try {
       const result = await userApi.getLocationSuggestion();
 
       if (result.formatted) {
-        setLocationSuggestion(result.formatted);
-      } else {
+        setProfileForm((prev) => ({ ...prev, location: result.formatted }));
+      } else if (!silent) {
         notifyError("No se pudo detectar la ubicación");
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al detectar ubicación";
-      notifyError(message);
+      if (!silent) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Error al detectar ubicación";
+        notifyError(message);
+      }
     } finally {
       setLocationLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!profileForm.location) {
+      detectLocation(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAccountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,60 +240,38 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="mt-3">
-                  <label
-                    htmlFor="location"
-                    className="mb-1 block text-xs font-medium text-card-foreground"
-                  >
+                  <label className="mb-1 block text-xs font-medium text-card-foreground">
                     Ubicación
                   </label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="location"
-                      value={profileForm.location}
-                      onChange={(e) =>
-                        setProfileForm((prev) => ({
-                          ...prev,
-                          location: e.target.value,
-                        }))
-                      }
-                      placeholder="Ciudad, País · Remote · etc."
-                      maxLength={100}
-                    />
-                    <Button
+                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                    <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm text-foreground">
+                      {locationLoading ? (
+                        <span className="text-muted-foreground">
+                          Detectando ubicación...
+                        </span>
+                      ) : profileForm.location ? (
+                        profileForm.location
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Sin ubicación detectada
+                        </span>
+                      )}
+                    </span>
+                    <button
                       type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={detectLocation}
+                      onClick={() => detectLocation(false)}
                       disabled={locationLoading}
-                      title="Detectar ubicación"
+                      title="Re-detectar ubicación"
+                      className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                     >
                       {locationLoading ? (
-                        <Loader2 className="size-4 animate-spin" />
+                        <Loader2 className="size-3.5 animate-spin" />
                       ) : (
-                        <MapPin className="size-4" />
+                        <RefreshCw className="size-3.5" />
                       )}
-                    </Button>
+                    </button>
                   </div>
-                  {locationSuggestion && (
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">
-                        Detectado: {locationSuggestion}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileForm((prev) => ({
-                            ...prev,
-                            location: locationSuggestion,
-                          }));
-                          setLocationSuggestion(null);
-                        }}
-                        className="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 font-medium text-foreground hover:bg-muted"
-                      >
-                        Usar
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
