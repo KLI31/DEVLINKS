@@ -191,6 +191,7 @@ export class UserService {
       buttonColor: user.buttonColor,
       buttonTextColor: user.buttonTextColor,
       altTitleFont: user.altTitleFont,
+      titleFont: user.titleFont,
       stickers: user.stickers ?? null,
       createdAt: user.createdAt,
       links: user.links,
