@@ -11,7 +11,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production=false
+RUN npm ci
 
 COPY prisma ./prisma
 RUN npx prisma generate
@@ -28,12 +28,20 @@ WORKDIR /app
 
 # Solo dependencias de producción
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copiar artefactos del build
+# Artefactos del build
 COPY --from=builder /app/dist ./dist
+
+# Cliente Prisma generado (runtime)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# CLI de Prisma: necesario para "npx prisma migrate deploy" en pre-deploy
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# Esquema y migraciones para prisma migrate deploy
 COPY prisma ./prisma
 
 # Usuario no root por seguridad

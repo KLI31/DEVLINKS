@@ -130,119 +130,34 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost
         run: npm run build
 
-  docker:
-    name: Docker — ${{ matrix.service }}
+  # ─────────────────────────────────────────────────────────────────────
+  # DEPLOY — Dokploy construye desde GitHub (sin GHCR ni registry)
+  # Solo se dispara en push a main después de que pasen los tests.
+  # Requisitos en GitHub → Settings → Secrets (environment: production):
+  #   DOKPLOY_HOST   → hostname de tu instancia Dokploy (sin https://)
+  #   DOKPLOY_TOKEN  → API token de Dokploy (Settings → API)
+  #   DOKPLOY_APP_ID → Application ID del backend en Dokploy
+  # Prisma migrations: configura "npx prisma migrate deploy" como
+  # Pre Deploy Command en la app de Dokploy (Build → Pre Deploy Command).
+  # ─────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy Backend to Dokploy
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    permissions:
-      contents: read
-      packages: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: backend
-            context: devlinks-backend
-            dockerfile: devlinks-backend/Dockerfile.prod
-          - service: frontend
-            context: devlinks-frontend
-            dockerfile: devlinks-frontend/Dockerfile.prod
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Compute short SHA
-        id: sha
-        run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/devlinks-${{ matrix.service }}
-          tags: |
-            type=raw,value=latest
-            type=raw,value=sha-${{ steps.sha.outputs.short }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=devlinks-${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=devlinks-${{ matrix.service }}
-
-  deploy:
-    name: Deploy to Production
-    needs: docker
-    runs-on: ubuntu-latest
     environment: production
 
     steps:
-      - name: Compute short SHA
-        id: sha
-        run: echo "short=$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
+      - name: Trigger Dokploy build & deploy
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://${{ secrets.DOKPLOY_HOST }}/api/application.deploy" \
+            -H "x-dokploy-token: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"applicationId":"${{ secrets.DOKPLOY_APP_ID }}"}')
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -e
+          echo "Dokploy response: $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ] || \
+            { echo "Dokploy deploy failed (HTTP $STATUS)"; exit 1; }
 
-            cd "${{ secrets.DEPLOY_PATH }}"
-
-            # Get latest compose + nginx configs
-            git pull origin main
-
-            # Auth with GHCR
-            echo "${{ secrets.GHCR_TOKEN }}" | \
-              docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-
-            # Export vars used by docker-compose.ghcr.yml
-            export GHCR_OWNER="${{ github.repository_owner }}"
-            export IMAGE_TAG="sha-${{ steps.sha.outputs.short }}"
-
-            # Pull the exact images verified by CI
-            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
-              pull backend frontend
-
-            # Rolling update: backend first so migrations run before frontend restarts
-            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
-              up -d --no-build --no-deps backend
-
-            # Wait for backend healthcheck then run migrations
-            sleep 8
-            docker compose -f docker-compose.prod.yml exec -T backend \
-              npx prisma migrate deploy
-
-            # Update frontend
-            docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml \
-              up -d --no-build --no-deps frontend
-
-            # Reload nginx to pick up any config changes
-            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || true
-
-            # Remove dangling images to free disk
-            docker image prune -f
-
-            echo "Deployed: $IMAGE_TAG"
+          echo "Build queued in Dokploy — commit ${{ github.sha }}"

@@ -1,0 +1,19 @@
+# Compose override: replaces build contexts with pre-built GHCR images.
+# Used by the CI/CD deploy job on the production server.
+#
+# Usage:
+#   GHCR_OWNER=<owner> IMAGE_TAG=sha-<short> \
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml pull
+#
+#   GHCR_OWNER=<owner> IMAGE_TAG=sha-<short> \
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ghcr.yml up -d --no-build
+#
+# Required env vars (set by the deploy workflow):
+#   GHCR_OWNER  — GitHub username / org (e.g. lramb)
+#   IMAGE_TAG   — exact tag built in CI (e.g. sha-a1b2c3d)
+services:
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/devlinks-backend:${IMAGE_TAG:-latest}
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER}/devlinks-frontend:${IMAGE_TAG:-latest}
