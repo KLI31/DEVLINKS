@@ -85,6 +85,7 @@ export function LinksClient({ initialLinks, userProfile }: LinksClientProps) {
       altTitleFont: userProfile.altTitleFont ?? false,
       stickers: null,
       links: activeSortedLinks,
+      titleFont: userProfile.titleFont ?? "inter",
       projects: [],
     };
   }, [userProfile, activeSortedLinks]);
