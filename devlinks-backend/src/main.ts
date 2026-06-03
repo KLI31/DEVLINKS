@@ -6,7 +6,6 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { CustomLogger } from './common/logger/custom-logger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -15,7 +14,6 @@ async function bootstrap() {
 
   app.use(helmet());
   app.use(cookieParser());
-  app.use(compression());
 
   const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
@@ -39,24 +37,26 @@ async function bootstrap() {
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('DevLinks API')
-    .setDescription(
-      'API para la plataforma DevLinks — hub de links para desarrolladores',
-    )
-    .setVersion('1.0')
-    .addCookieAuth('accessToken')
-    .addTag('auth', 'Autenticación y gestión de sesión')
-    .addTag('user', 'Perfil de usuario')
-    .addTag('links', 'Gestión de links')
-    .addTag('github', 'Integración con GitHub')
-    .addTag('analytics', 'Analítica de clicks y visitas')
-    .build();
+  if (process.env.ENABLE_SWAGGER === 'true') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('DevLinks API')
+      .setDescription(
+        'API para la plataforma DevLinks — hub de links para desarrolladores',
+      )
+      .setVersion('1.0')
+      .addCookieAuth('accessToken')
+      .addTag('auth', 'Autenticación y gestión de sesión')
+      .addTag('user', 'Perfil de usuario')
+      .addTag('links', 'Gestión de links')
+      .addTag('github', 'Integración con GitHub')
+      .addTag('analytics', 'Analítica de clicks y visitas')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   app.enableShutdownHooks();
 

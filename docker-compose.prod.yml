@@ -4,6 +4,20 @@ services:
     image: postgres:16-alpine
     container_name: devlinks-postgres
     restart: always
+    mem_limit: 512m
+    memswap_limit: 512m
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=64MB"
+      - "-c"
+      - "effective_cache_size=256MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=32MB"
+      - "-c"
+      - "max_connections=50"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -45,6 +59,8 @@ services:
       dockerfile: Dockerfile.prod
     container_name: devlinks-backend
     restart: always
+    mem_limit: 768m
+    memswap_limit: 768m
     expose:
       - "3001"
     env_file:

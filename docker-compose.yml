@@ -3,6 +3,20 @@ services:
     image: postgres:16-alpine
     container_name: devlinks-postgres
     restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=64MB"
+      - "-c"
+      - "effective_cache_size=256MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=32MB"
+      - "-c"
+      - "max_connections=50"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -40,11 +54,14 @@ services:
       dockerfile: Dockerfile.prod # <-- Dockerfile de producción
     container_name: devlinks-backend
     restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 768m
     expose:
       - "3001"
     environment:
       NODE_ENV: production
       PORT: 3001
+      # Agregar ?connection_limit=5 al DATABASE_URL real en .env.prod para limitar pool de Prisma
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       REDIS_URL: redis://redis:6379
     env_file:

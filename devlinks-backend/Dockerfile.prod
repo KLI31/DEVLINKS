@@ -14,6 +14,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY prisma ./prisma
+ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 RUN npx prisma generate
 
 COPY . .
@@ -25,6 +26,9 @@ FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
+
+# Limitar heap de Node.js a 512MB (V8) + optimizar para baja memoria
+ENV NODE_OPTIONS=--max-old-space-size=512
 
 # Solo dependencias de producción
 COPY package*.json ./
