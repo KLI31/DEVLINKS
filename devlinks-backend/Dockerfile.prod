@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────
 
 # ── Etapa 1: Build ─────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 RUN apk add --no-cache libc6-compat openssl
 
@@ -21,7 +21,7 @@ COPY . .
 RUN npm run build
 
 # ── Etapa 2: Runtime ───────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 
 RUN apk add --no-cache libc6-compat openssl
 
