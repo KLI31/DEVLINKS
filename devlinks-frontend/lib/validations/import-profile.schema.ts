@@ -44,6 +44,20 @@ export const importProfileSchema = z.object({
           "dm-sans",
         ])
         .optional(),
+      titleFont: z
+        .enum([
+          "inter",
+          "poppins",
+          "mono",
+          "playfair",
+          "jetbrains-mono",
+          "fraunces",
+          "space-grotesk",
+          "fira-code",
+          "outfit",
+          "dm-sans",
+        ])
+        .optional(),
       bgType: z.enum(["flat", "gradient"]).optional(),
       bgColor: hexColor.optional(),
       profileLayout: z.enum(["classic", "cover"]).optional(),

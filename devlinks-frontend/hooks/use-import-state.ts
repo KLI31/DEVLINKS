@@ -384,6 +384,9 @@ export function useImportState({
       altTitleFont:
         ((profileData as Record<string, unknown>).altTitleFont as boolean) ??
         false,
+      titleFont:
+        ((profileData as Record<string, unknown>).titleFont as string) ??
+        base.profile.titleFont,
       stickers: stickers.length > 0 ? stickers : null,
       links,
       projects: [],

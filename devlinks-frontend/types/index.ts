@@ -238,6 +238,7 @@ export interface ProfileExportJson {
     bgColor: string;
     profileLayout: string;
     coverImageUrl: string;
+    titleFont?: string;
   };
   links: {
     title: string;
