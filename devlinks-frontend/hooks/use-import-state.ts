@@ -249,7 +249,9 @@ export function useImportState({
     }
 
     // Remove version field before sending — backend doesn't accept it
-    const importPayload = { ...data } as ProfileImportJson & { version?: string };
+    const importPayload = { ...data } as ProfileImportJson & {
+      version?: string;
+    };
     delete (importPayload as Record<string, unknown>).version;
 
     setIsImporting(true);
@@ -295,6 +297,7 @@ export function useImportState({
         buttonColor: user.accentColor,
         buttonTextColor: "#FFFFFF",
         altTitleFont: false,
+        titleFont: user.titleFont ?? "inter",
       },
       links: [],
       stickers: [],
@@ -336,8 +339,7 @@ export function useImportState({
       bio: profileData.bio ?? base.profile.bio,
       location: profileData.location ?? base.profile.location,
       avatarUrl: profileData.avatarUrl ?? base.profile.avatarUrl,
-      githubUsername:
-        profileData.githubUsername ?? base.profile.githubUsername,
+      githubUsername: profileData.githubUsername ?? base.profile.githubUsername,
       theme: profileData.theme ?? base.profile.theme,
       accentColor: profileData.accentColor ?? base.profile.accentColor,
       buttonStyle: profileData.buttonStyle ?? base.profile.buttonStyle,
@@ -349,17 +351,39 @@ export function useImportState({
         profileData.coverImageUrl !== undefined
           ? (profileData.coverImageUrl ?? "")
           : base.profile.coverImageUrl,
-      layout: ((profileData as Record<string, unknown>).layout as string) ?? "classic",
-      title: ((profileData as Record<string, unknown>).title ?? null) as string | null,
-      titleStyle: ((profileData as Record<string, unknown>).titleStyle as string) ?? "text",
-      titleColor: ((profileData as Record<string, unknown>).titleColor as string) ?? "#F8FAFC",
-      pageTextColor: ((profileData as Record<string, unknown>).pageTextColor as string) ?? "#F8FAFC",
-      buttonVariant: ((profileData as Record<string, unknown>).buttonVariant as string) ?? "solid",
-      buttonRadius: ((profileData as Record<string, unknown>).buttonRadius as number) ?? 8,
-      buttonShadow: ((profileData as Record<string, unknown>).buttonShadow as string) ?? "none",
-      buttonColor: ((profileData as Record<string, unknown>).buttonColor as string) ?? profileData.accentColor ?? base.profile.accentColor,
-      buttonTextColor: ((profileData as Record<string, unknown>).buttonTextColor as string) ?? "#FFFFFF",
-      altTitleFont: ((profileData as Record<string, unknown>).altTitleFont as boolean) ?? false,
+      layout:
+        ((profileData as Record<string, unknown>).layout as string) ??
+        "classic",
+      title: ((profileData as Record<string, unknown>).title ?? null) as
+        | string
+        | null,
+      titleStyle:
+        ((profileData as Record<string, unknown>).titleStyle as string) ??
+        "text",
+      titleColor:
+        ((profileData as Record<string, unknown>).titleColor as string) ??
+        "#F8FAFC",
+      pageTextColor:
+        ((profileData as Record<string, unknown>).pageTextColor as string) ??
+        "#F8FAFC",
+      buttonVariant:
+        ((profileData as Record<string, unknown>).buttonVariant as string) ??
+        "solid",
+      buttonRadius:
+        ((profileData as Record<string, unknown>).buttonRadius as number) ?? 8,
+      buttonShadow:
+        ((profileData as Record<string, unknown>).buttonShadow as string) ??
+        "none",
+      buttonColor:
+        ((profileData as Record<string, unknown>).buttonColor as string) ??
+        profileData.accentColor ??
+        base.profile.accentColor,
+      buttonTextColor:
+        ((profileData as Record<string, unknown>).buttonTextColor as string) ??
+        "#FFFFFF",
+      altTitleFont:
+        ((profileData as Record<string, unknown>).altTitleFont as boolean) ??
+        false,
       stickers: stickers.length > 0 ? stickers : null,
       links,
       projects: [],
