@@ -95,7 +95,10 @@ export default function SettingsPage() {
       const result = await userApi.getLocationSuggestion();
 
       if (result.formatted) {
-        setProfileForm((prev) => ({ ...prev, location: result.formatted }));
+        setProfileForm((prev) => ({
+          ...prev,
+          location: result.formatted ?? "",
+        }));
       } else if (!silent) {
         notifyError("No se pudo detectar la ubicación");
       }
@@ -116,7 +119,7 @@ export default function SettingsPage() {
     if (!profileForm.location) {
       detectLocation(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAccountSubmit = (e: React.FormEvent) => {
