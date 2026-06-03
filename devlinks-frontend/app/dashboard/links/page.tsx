@@ -13,7 +13,7 @@ export default function DashboardLinksPage() {
 
 async function LinksPageContent() {
   const [links, user] = await Promise.all([
-    linksApi.getAll(),
+    linksApi.getAll().catch(() => [] as import("@/types").LinkItem[]),
     userApi.me().catch(() => null),
   ]);
   return <LinksClient initialLinks={links} userProfile={user} />;

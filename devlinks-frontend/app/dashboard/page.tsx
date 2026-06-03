@@ -5,7 +5,7 @@ import { RecentLinksCard } from "@/components/dashboard/RecentLinksCard";
 import { GithubLoginSync } from "@/components/dashboard/GithubLoginSync";
 
 export default async function DashboardPage() {
-  const links = await linksApi.getAll();
+  const links = await linksApi.getAll().catch(() => [] as import("@/types").LinkItem[]);
 
   return (
     <div className="flex flex-col gap-4">

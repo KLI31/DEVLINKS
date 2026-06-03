@@ -48,10 +48,11 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
 
+  const isServer = typeof window === "undefined";
   const response = await fetch(`${BASE_URL}${url}`, {
     ...fetchOptions,
     method,
-    mode: "cors",
+    ...(isServer ? {} : { mode: "cors" as RequestMode }),
     credentials: "include",
     headers,
     body: body ? JSON.stringify(body) : undefined,
