@@ -5,16 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function getPublicSiteOrigin(): { protocol: string; host: string } {
-  const isProd = process.env.NEXT_PUBLIC_ENV === "production";
-  const host = isProd ? "devlinks.nova11labs.dev" : "localhost:3000";
-  const protocol = isProd ? "https" : "http";
-  return { protocol, host };
+function getPublicSiteOrigin(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_ENV === "production"
+      ? "https://devlinks.nova11labs.dev"
+      : "http://localhost:3000")
+  );
 }
 
 export function getPublicProfileUrlPrefix(): string {
-  const { protocol, host } = getPublicSiteOrigin();
-  return `${protocol}://${host}/u/`;
+  return `${getPublicSiteOrigin()}/u/`;
 }
 
 export const getProfileUrl = (username: string) => {

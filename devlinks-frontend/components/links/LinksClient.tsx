@@ -6,6 +6,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { Plus } from "lucide-react";
 import type { UserProfile, PublicProfile, LinkItem } from "@/types";
 import { useLinksStore } from "@/store/links-store";
+import { useAuthStore } from "@/store/auth-store";
+import { userApi } from "@/lib/api/user.api";
 import { Button } from "@/components/ui/button";
 import { LinkList } from "./LinkList";
 import { LinkFormModal } from "./LinkFormModal";
@@ -26,14 +28,23 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function LinksClient({ initialLinks, userProfile }: LinksClientProps) {
+export function LinksClient({ initialLinks, userProfile: initialUserProfile }: LinksClientProps) {
   const { links, setLinks } = useLinksStore();
+  const { user: authUser } = useAuthStore();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(initialUserProfile);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     setLinks(initialLinks);
   }, [initialLinks, setLinks]);
+
+  // Server-side fetch may fail (no access token in SSR); retry client-side
+  useEffect(() => {
+    if (!userProfile) {
+      userApi.me().then(setUserProfile).catch(() => {});
+    }
+  }, [userProfile]);
 
   const handleAdd = () => {
     setSheetOpen(true);
@@ -100,26 +111,26 @@ export function LinksClient({ initialLinks, userProfile }: LinksClientProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div className="flex items-center gap-4">
           <div className="flex size-14 items-center justify-center overflow-hidden rounded-full bg-muted ring-2 ring-border">
-            {userProfile?.avatarUrl ? (
+            {(userProfile?.avatarUrl ?? authUser?.avatarUrl) ? (
               <Image
-                src={userProfile.avatarUrl}
-                alt={userProfile.displayName}
+                src={(userProfile?.avatarUrl ?? authUser?.avatarUrl)!}
+                alt={(userProfile?.displayName ?? authUser?.displayName ?? "")}
                 width={56}
                 height={56}
                 className="size-full object-cover"
               />
             ) : (
               <span className="text-sm font-medium text-muted-foreground">
-                {getInitials(userProfile?.displayName ?? "?")}
+                {getInitials(userProfile?.displayName ?? authUser?.displayName ?? "?")}
               </span>
             )}
           </div>
           <div className="flex flex-col gap-0.5">
             <p className="text-base font-semibold">
-              {userProfile?.displayName ?? "Tu nombre"}
+              {userProfile?.displayName ?? authUser?.displayName ?? "Tu nombre"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {userProfile?.bio ?? "Tu biografía"}
+              {userProfile?.bio ?? authUser?.bio ?? "Tu biografía"}
             </p>
             {primaryLinks.length > 0 && (
               <div className="mt-1 flex items-center gap-2">
