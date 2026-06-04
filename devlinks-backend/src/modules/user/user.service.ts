@@ -13,7 +13,7 @@ import { SetPinnedReposDto } from './dto/set-pinned-repos.dto';
 import { UpdateStickersDto } from './dto/update-stickers.dto';
 import { ImportProfileDto } from './dto/import-profile.dto';
 import { USER_MESSAGES } from '../../common/messages';
-import { lookupIp, hashIp, type GeoResult } from './helpers/geo-ip.helper';
+import { lookupIpOnline, hashIp, type GeoResult } from './helpers/geo-ip.helper';
 import type { User, Link, Prisma } from '@prisma/client';
 
 export type UserPublic = {
@@ -313,14 +313,14 @@ export class UserService {
 
   async getLocationSuggestion(rawIp: string): Promise<GeoResult> {
     const ip = rawIp.trim() || '127.0.0.1';
-    const key = `geoip:${hashIp(ip)}`;
+    const key = `geoip:v2:${hashIp(ip)}`;
     const cached = await this.redis.getClient().get(key);
 
     if (cached) {
       return JSON.parse(cached) as GeoResult;
     }
 
-    const result = lookupIp(ip);
+    const result = await lookupIpOnline(ip);
     await this.redis.getClient().setex(key, 86400, JSON.stringify(result));
     return result;
   }

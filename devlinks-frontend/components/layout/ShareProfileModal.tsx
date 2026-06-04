@@ -173,7 +173,7 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
         }
       />
 
-      <DialogContent className="max-w-sm gap-5 p-6">
+      <DialogContent className="max-w-sm gap-5 p-6 overflow-hidden">
         <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
 
         {/* QR centrado */}

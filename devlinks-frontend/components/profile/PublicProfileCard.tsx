@@ -711,7 +711,7 @@ export function PublicProfileCard({
                     )}
                     <div
                       className={cn(
-                        "flex items-center gap-3",
+                        "flex items-center justify-between gap-3",
                         isFeatured && "px-4 py-3",
                       )}
                     >
@@ -735,7 +735,7 @@ export function PublicProfileCard({
                         />
                       ) : null}
                       <span
-                        className="flex-1 break-words text-center text-[12px] font-medium leading-snug"
+                        className="min-w-0 flex-1 break-words text-center text-[12px] font-medium leading-snug"
                         style={{ color: isFeatured ? textPrimary : bTextColor }}
                       >
                         {link.title}

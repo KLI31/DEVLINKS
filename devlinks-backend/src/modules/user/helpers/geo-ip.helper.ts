@@ -12,6 +12,47 @@ export function hashIp(ip: string): string {
   return crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
 }
 
+export async function lookupIpOnline(rawIp: string): Promise<GeoResult> {
+  const ip = cleanIp(rawIp);
+
+  if (isPrivateOrLoopback(ip)) {
+    return { city: null, country: null, countryCode: null, formatted: null };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,city,country,countryCode`,
+      { signal: controller.signal },
+    );
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error('lookup failed');
+    const data = (await res.json()) as {
+      status: string;
+      city?: string;
+      country?: string;
+      countryCode?: string;
+    };
+
+    if (data.status !== 'success') {
+      return { city: null, country: null, countryCode: null, formatted: null };
+    }
+
+    const city = data.city || null;
+    const countryCode = data.countryCode || null;
+    const country = data.country || null;
+    const formatted =
+      city && country ? `${city}, ${country}` : (city ?? country ?? null);
+
+    return { city, country, countryCode, formatted };
+  } catch {
+    return lookupIp(rawIp);
+  }
+}
+
 export function lookupIp(rawIp: string): GeoResult {
   const ip = cleanIp(rawIp);
 

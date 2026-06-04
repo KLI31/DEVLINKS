@@ -15,7 +15,8 @@
       "WebFetch(domain:bundlephobia.com)",
       "WebFetch(domain:blog.logrocket.com)",
       "Bash(npm list *)",
-      "Bash(node -e \"const pkg = require\\('./node_modules/@uiw/react-textarea-code-editor/package.json'\\); console.log\\('main:', pkg.main\\); console.log\\('exports:', JSON.stringify\\(pkg.exports, null, 2\\).slice\\(0, 400\\)\\)\")"
+      "Bash(node -e \"const pkg = require\\('./node_modules/@uiw/react-textarea-code-editor/package.json'\\); console.log\\('main:', pkg.main\\); console.log\\('exports:', JSON.stringify\\(pkg.exports, null, 2\\).slice\\(0, 400\\)\\)\")",
+      "Bash(grep -v \"import\\\\|//\\\\|displayOrder\\\\|location-suggestion\")"
     ]
   }
 }
