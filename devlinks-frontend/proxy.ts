@@ -97,9 +97,10 @@ function buildResponseWithTokens(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Inject real client IP for all API routes so the backend
-  // receives the visitor's IP instead of the Next.js server IP.
-  if (pathname.startsWith("/api/")) {
+  // Inject real client IP for analytics/user API routes.
+  // Auth routes are excluded — modifying their request headers breaks
+  // the OAuth callback redirect and cookie delivery.
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
     const forwarded = request.headers.get("x-forwarded-for");
     const realIp =
       forwarded?.split(",")[0]?.trim() ??
