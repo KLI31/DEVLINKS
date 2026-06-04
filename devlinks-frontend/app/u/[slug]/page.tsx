@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { userApi } from "@/lib/api/user.api";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
@@ -13,15 +14,25 @@ interface PublicProfilePageProps {
 const isValidHex = (color: string | undefined) =>
   typeof color === "string" && /^#[0-9A-Fa-f]{6}$/.test(color);
 
-const getCachedPublicProfile = cache((slug: string) =>
-  userApi.getPublicProfile(slug).catch(() => null),
+const getCachedPublicProfile = cache((slug: string, clientIp: string) =>
+  userApi.getPublicProfile(slug, clientIp || undefined).catch(() => null),
 );
+
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    ""
+  );
+}
 
 export async function generateMetadata({
   params,
 }: PublicProfilePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const profile = await getCachedPublicProfile(slug);
+  const clientIp = await getClientIp();
+  const profile = await getCachedPublicProfile(slug, clientIp);
 
   const title = profile?.displayName
     ? `${profile.displayName} (@${profile.username})`
@@ -61,8 +72,9 @@ export default async function PublicProfilePage({
   params,
 }: PublicProfilePageProps) {
   const { slug } = await params;
+  const clientIp = await getClientIp();
 
-  const profile = await getCachedPublicProfile(slug);
+  const profile = await getCachedPublicProfile(slug, clientIp);
   if (!profile) notFound();
 
   const projects = await userApi.getPublicProjects(slug).catch(() => [] as Project[]);
@@ -79,7 +91,7 @@ export default async function PublicProfilePage({
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center justify-start overflow-x-hidden px-4 py-16"
+      className="flex min-h-screen flex-col items-center justify-start overflow-x-hidden px-4 py-16 scrollbar-hide"
       style={{ background: pageBg }}
     >
       <PublicProfileCard

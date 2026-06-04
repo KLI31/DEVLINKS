@@ -15,8 +15,11 @@ export const userApi = {
   updateProfile: (data: UpdateProfilePayload) =>
     apiService.patch<UserProfile>("/user/me", data),
 
-  getPublicProfile: (username: string) =>
-    apiService.get<PublicProfile>(`/user/${username}`),
+  getPublicProfile: (username: string, clientIp?: string) =>
+    apiService.get<PublicProfile>(
+      `/user/${username}`,
+      clientIp ? { headers: { "X-Client-IP": clientIp } } : undefined,
+    ),
 
   getMyProjects: () =>
     apiService.get<Project[]>("/user/me/projects"),

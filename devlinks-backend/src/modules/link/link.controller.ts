@@ -25,6 +25,17 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { assertSafeUrl } from '../../common/utils/url-validator';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
+
+function extractIp(req: Request): string {
+  const clientIp = req.headers['x-client-ip'];
+  if (typeof clientIp === 'string' && clientIp) return clientIp.trim();
+
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded)
+    return forwarded.split(',')[0].trim();
+
+  return req.socket?.remoteAddress ?? '127.0.0.1';
+}
 import * as cheerio from 'cheerio';
 
 @ApiTags('links')
@@ -131,11 +142,7 @@ export class LinkController {
       return { message: 'Link no encontrado' };
     }
 
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip =
-      typeof forwarded === 'string'
-        ? forwarded.split(',')[0].trim()
-        : (req.socket?.remoteAddress ?? '127.0.0.1');
+    const ip = extractIp(req);
     const userAgent = req.headers['user-agent'];
     const referrer = req.headers['referer'];
 

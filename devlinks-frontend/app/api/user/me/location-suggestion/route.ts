@@ -18,10 +18,7 @@ export async function GET(request: NextRequest) {
       {
         headers: {
           ...(cookieHeader && { Cookie: cookieHeader }),
-          ...(realIp && {
-            "X-Forwarded-For": realIp,
-            "X-Real-IP": realIp,
-          }),
+          ...(realIp && { "X-Client-IP": realIp }),
         },
       },
     );
