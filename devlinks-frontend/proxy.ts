@@ -97,10 +97,12 @@ function buildResponseWithTokens(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Inject real client IP for analytics/user API routes.
-  // Auth routes are excluded — modifying their request headers breaks
-  // the OAuth callback redirect and cookie delivery.
-  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
+  // Inject real client IP for analytics routes so the backend
+  // receives the visitor's IP instead of the Vercel server IP.
+  if (
+    pathname.startsWith("/api/links/") ||
+    pathname.startsWith("/api/user/")
+  ) {
     const forwarded = request.headers.get("x-forwarded-for");
     const realIp =
       forwarded?.split(",")[0]?.trim() ??
@@ -173,5 +175,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/dashboard/:path*", "/login", "/register"],
+  matcher: [
+    "/api/links/:path*",
+    "/api/user/:path*",
+    "/dashboard/:path*",
+    "/login",
+    "/register",
+  ],
 };
