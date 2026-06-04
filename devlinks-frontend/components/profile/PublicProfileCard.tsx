@@ -24,7 +24,7 @@ import type {
   GithubStats,
 } from "@/types";
 import { iconUrl } from "@/lib/icons";
-import { getDevIconUrl } from "@/lib/api/github.api";
+
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 import { getProfileUrl } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -115,7 +115,9 @@ export function PublicProfileCard({
     if (!profile.githubUsername) return;
     fetch(`/api/user/${profile.username}/github-stats`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (data) setGithubStats(data); })
+      .then((data) => {
+        if (data) setGithubStats(data);
+      })
       .catch(() => {});
   }, [profile.username, profile.githubUsername, initialStats]);
 
@@ -153,7 +155,8 @@ export function PublicProfileCard({
 
   const fontFamily = FONT_CSS[profile.fontFamily] ?? FONT_CSS["jetbrains-mono"];
   const titleFontFamily = profile.altTitleFont
-    ? (FONT_CSS[(profile as unknown as Record<string, string>).titleFont] ?? FONT_CSS["playfair"])
+    ? (FONT_CSS[(profile as unknown as Record<string, string>).titleFont] ??
+      FONT_CSS["playfair"])
     : fontFamily;
 
   const bRadius = `${profile.buttonRadius ?? 8}px`;
@@ -404,7 +407,10 @@ export function PublicProfileCard({
 
           {profile.location && (
             <div className="mt-1.5 flex items-center justify-center gap-1">
-              <MapPin className="size-3 shrink-0" style={{ color: textSecondary }} />
+              <MapPin
+                className="size-3 shrink-0"
+                style={{ color: textSecondary }}
+              />
               <span className="text-[11px]" style={{ color: textSecondary }}>
                 {profile.location}
               </span>
@@ -448,37 +454,34 @@ export function PublicProfileCard({
 
         {statsItems.length > 0 && (
           <>
-            <div className="mb-4 h-px" style={{ background: dividerColor }} />
-            <div className="grid grid-cols-4 gap-2">
-              {statsItems.map(({ label, value, Icon, iconColor }) => (
-                <div
-                  key={label}
-                  className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-1"
-                  style={{
-                    background: `${iconColor}0d`,
-                    border: `1px solid ${iconColor}20`,
-                  }}
-                >
-                  <div
-                    className="flex items-center justify-center rounded-lg p-1.5"
-                    style={{
-                      background: `${iconColor}18`,
-                    }}
-                  >
-                    <Icon className="size-4" style={{ color: iconColor }} />
+            <div className="flex items-center justify-center">
+              {statsItems.map(({ label, value, Icon, iconColor }, i) => (
+                <div key={label} className="flex items-center">
+                  {i > 0 && (
+                    <span
+                      className="mx-3 text-[10px]"
+                      style={{ color: textMuted }}
+                    >
+                      •
+                    </span>
+                  )}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-1">
+                      <Icon className="size-[14px]" style={{ color: iconColor }} />
+                      <span
+                        className="text-[15px] font-bold tabular-nums leading-none"
+                        style={{ color: textPrimary }}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                    <span
+                      className="text-[9px] leading-tight"
+                      style={{ color: textMuted }}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <span
-                    className="text-[15px] font-bold tabular-nums leading-none"
-                    style={{ color: textPrimary }}
-                  >
-                    {value}
-                  </span>
-                  <span
-                    className="text-center text-[8px] leading-tight"
-                    style={{ color: textMuted }}
-                  >
-                    {label}
-                  </span>
                 </div>
               ))}
             </div>
@@ -674,7 +677,7 @@ export function PublicProfileCard({
                       "flex w-full overflow-hidden",
                       isFeatured
                         ? "flex-col"
-                        : "min-h-[52px] items-center gap-3 px-4 py-3",
+                        : "min-h-13 w-full items-center  gap-3 px-4 py-3",
                     )}
                     style={{
                       borderRadius: bRadius,
@@ -711,41 +714,43 @@ export function PublicProfileCard({
                     )}
                     <div
                       className={cn(
-                        "flex items-center justify-between gap-3",
+                        "flex w-full items-center gap-3",
                         isFeatured && "px-4 py-3",
                       )}
                     >
-                      {!isFeatured && link.previewImage ? (
-                        <Image
-                          src={link.previewImage}
-                          alt={link.title}
-                          width={40}
-                          height={40}
-                          unoptimized
-                          className="size-10 shrink-0 rounded-md object-cover"
-                        />
-                      ) : link.icon ? (
-                        <Image
-                          src={iconUrl(link.icon, profile.accentColor)}
-                          alt={link.icon}
-                          width={16}
-                          height={16}
-                          unoptimized
-                          className="size-4 shrink-0 object-contain"
-                        />
-                      ) : null}
+                      <div className="flex size-5 shrink-0 items-center justify-start">
+                        {!isFeatured && link.previewImage ? (
+                          <Image
+                            src={link.previewImage}
+                            alt={link.title}
+                            width={20}
+                            height={20}
+                            unoptimized
+                            className="size-5 rounded object-cover"
+                          />
+                        ) : link.icon ? (
+                          <Image
+                            src={iconUrl(link.icon, profile.accentColor)}
+                            alt={link.icon}
+                            width={14}
+                            height={14}
+                            unoptimized
+                            className="size-3.5 object-contain"
+                          />
+                        ) : null}
+                      </div>
                       <span
-                        className="min-w-0 flex-1 break-words text-center text-[12px] font-medium leading-snug"
-                        style={{ color: isFeatured ? textPrimary : bTextColor }}
+                        className="flex-1 text-center text-[12px] font-medium leading-snug"
+                        style={{ color: textPrimary }}
                       >
                         {link.title}
                       </span>
-                      <ChevronRight
-                        className="size-4 shrink-0"
-                        style={{
-                          color: isFeatured ? textMuted : `${bTextColor}80`,
-                        }}
-                      />
+                      <div className="flex size-5 shrink-0 items-center justify-end">
+                        <ChevronRight
+                          className="size-3.5"
+                          style={{ color: `${textPrimary}60` }}
+                        />
+                      </div>
                     </div>
                   </motion.a>
                 );

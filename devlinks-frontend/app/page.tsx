@@ -18,10 +18,6 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * Build JSON-LD structured data with hardcoded/validated values only.
- * No user input is ever interpolated here, preventing XSS via script injection.
- */
 function buildStructuredData(): string {
   const data = {
     "@context": "https://schema.org",
@@ -36,17 +32,17 @@ function buildStructuredData(): string {
       {
         "@type": "WebSite",
         name: "DevLinks",
-        url: "https://devlinks.nova11labs.dev",
+        url: "https://devlinks.lramdev.com",
         potentialAction: {
           "@type": "SearchAction",
-          target: "https://devlinks.nova11labs.dev/u/{search_term_string}",
+          target: "https://devlinks.lramdev.com/u/{search_term_string}",
           "query-input": "required name=search_term_string",
         },
       },
       {
         "@type": "WebPage",
-        "@id": "https://devlinks.nova11labs.dev/#webpage",
-        url: "https://devlinks.nova11labs.dev",
+        "@id": "https://devlinks.lramdev.com/#webpage",
+        url: "https://devlinks.lramdev.com",
         name: "DevLinks — Hub de links para developers",
         description:
           "Centraliza todos tus links de developer en un solo lugar. Integración nativa con GitHub, analíticas por link, QR codes y themes personalizados. Gratis para siempre.",

@@ -173,10 +173,9 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
         }
       />
 
-      <DialogContent className="max-w-sm gap-5 p-6 overflow-hidden">
+      <DialogContent className="max-w-sm container  gap-5 p-6 overflow-hidden">
         <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
 
-        {/* QR centrado */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
             <QRCodeSVG
@@ -208,7 +207,6 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
           </div>
         </div>
 
-        {/* Divisor */}
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-border/50" />
           <span className="text-[11px] font-medium text-muted-foreground">
@@ -217,7 +215,6 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
           <div className="h-px flex-1 bg-border/50" />
         </div>
 
-        {/* Redes sociales */}
         <div className="flex justify-center gap-4">
           {socialPlatforms.map((platform) => {
             const Icon = platform.icon;
@@ -245,7 +242,6 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
           })}
         </div>
 
-        {/* Copiar link */}
         <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background">
             <Link className="size-4 text-muted-foreground" />
