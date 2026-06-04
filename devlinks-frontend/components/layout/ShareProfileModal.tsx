@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, Check, QrCode, Share2, Link } from "lucide-react";
+import { Copy, Check, Share2, Link } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 
 import { Button } from "@/components/ui/button";
@@ -173,92 +173,97 @@ export function ShareProfileModal({ className }: ShareProfileModalProps) {
         }
       />
 
-      <DialogContent className=" max-w-lg mx-auto sm:max-w-lg  gap-6">
+      <DialogContent className="max-w-sm gap-5 p-6">
         <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
 
-        <div className="flex items-center gap-5">
-          <div className="relative shrink-0">
-            <div className="rounded-xl border border-border/60 bg-white p-3">
-              <QRCodeSVG
-                value={publicUrl}
-                size={140}
-                level="H"
-                bgColor="#ffffff"
-                fgColor="#0f172a"
-              />
-            </div>
-
-            <div className="absolute inset-0 flex items-center justify-center ">
-              <div className="rounded-full bg-white p-2.5 ring-1 ring-black/5">
+        {/* QR centrado */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+            <QRCodeSVG
+              value={publicUrl}
+              size={152}
+              level="H"
+              bgColor="#ffffff"
+              fgColor="#0f172a"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="rounded-full bg-white p-2 ring-2 ring-border/40 shadow-sm">
                 <Image
                   src="/logo.svg"
                   alt=""
-                  width={20}
-                  height={20}
-                  className="block object-contain size-5"
+                  width={22}
+                  height={22}
+                  className="block size-[22px] object-contain"
                 />
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <QrCode className="size-5 text-primary" />
-              <span className="font-semibold text-foreground">Escaneame</span>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Abre la cámara de tu teléfono y escanea el código QR
+          <div className="text-center">
+            <p className="text-sm font-semibold text-foreground">
+              Escanea el código QR
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Abre la cámara de tu teléfono
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-5">
-          <p className="text-center text-sm font-medium text-muted-foreground">
-            Compartir en
-          </p>
-          <div className="flex justify-between ">
-            {socialPlatforms.map((platform) => {
-              const Icon = platform.icon;
-              return (
-                <button
-                  key={platform.id}
-                  type="button"
-                  onClick={() => handleSocialShare(platform)}
-                  className="flex flex-col items-center gap-1.5  group cursor-pointer"
-                >
-                  <div
-                    className="flex items-center justify-center rounded-full transition-transform group-hover:scale-110"
-                    style={{ color: platform.color }}
-                  >
-                    <Icon />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground leading-none">
-                    {platform.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Divisor */}
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-border/50" />
+          <span className="text-[11px] font-medium text-muted-foreground">
+            o comparte en
+          </span>
+          <div className="h-px flex-1 bg-border/50" />
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
-          <div className="flex items-center justify-center rounded-full bg-white p-2.5 ring-1 ring-black/5">
-            <Link className="size-5 text-muted-foreground" />
+        {/* Redes sociales */}
+        <div className="flex justify-center gap-4">
+          {socialPlatforms.map((platform) => {
+            const Icon = platform.icon;
+            return (
+              <button
+                key={platform.id}
+                type="button"
+                onClick={() => handleSocialShare(platform)}
+                className="group flex flex-col items-center gap-1.5 cursor-pointer"
+              >
+                <div
+                  className="flex size-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 group-active:scale-95"
+                  style={{
+                    background: `${platform.color}18`,
+                    color: platform.color,
+                  }}
+                >
+                  <Icon />
+                </div>
+                <span className="text-[10px] leading-none text-muted-foreground">
+                  {platform.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Copiar link */}
+        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background">
+            <Link className="size-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-medium text-muted-foreground">
               Enlace público
             </p>
-            <p className="text-sm text-foreground truncate">{publicUrl}</p>
+            <p className="truncate text-xs text-foreground">{publicUrl}</p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5 h-8 cursor-pointer"
+            className="h-8 shrink-0 gap-1.5 cursor-pointer"
             onClick={handleCopy}
           >
             {copied ? (
-              <Check className="size-3.5 text-success" />
+              <Check className="size-3.5 text-green-500" />
             ) : (
               <Copy className="size-3.5" />
             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import {
   MapPin,
@@ -100,11 +100,28 @@ interface PublicProfileCardProps {
 export function PublicProfileCard({
   profile,
   projects,
-  githubStats,
+  githubStats: initialStats,
   hideShare = false,
 }: PublicProfileCardProps) {
   const { notifySuccess, notifyError } = useNotifications();
   const coverRef = useRef<HTMLDivElement>(null);
+
+  const [githubStats, setGithubStats] = useState<GithubStats | null>(
+    initialStats ?? null,
+  );
+
+  useEffect(() => {
+    if (initialStats !== undefined) return;
+    if (!profile.githubUsername) return;
+    fetch(`/api/user/${profile.username}/github-stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setGithubStats(data); })
+      .catch(() => {});
+  }, [profile.username, profile.githubUsername, initialStats]);
+
+  const trackClick = (linkId: string) => {
+    fetch(`/api/links/${linkId}/click`, { method: "POST" }).catch(() => {});
+  };
   const { scrollY } = useScroll();
   const coverOpacity = useTransform(scrollY, [0, 300], [1, 0]);
   const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
@@ -412,6 +429,7 @@ export function PublicProfileCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   title={link.title}
+                  onClick={() => trackClick(link.id)}
                   className="flex size-10 shrink-0 items-center justify-center transition-all hover:opacity-80 hover:scale-110"
                 >
                   <Image
@@ -651,6 +669,7 @@ export function PublicProfileCard({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackClick(link.id)}
                     className={cn(
                       "flex w-full overflow-hidden",
                       isFeatured

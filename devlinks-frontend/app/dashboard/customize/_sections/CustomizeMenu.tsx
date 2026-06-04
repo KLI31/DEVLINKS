@@ -3,10 +3,10 @@
 import {
   User,
   Type,
-  Palette,
   RectangleHorizontal,
   ImageIcon,
   Sparkles,
+  GitBranch,
   ChevronRight,
 } from "lucide-react";
 
@@ -41,6 +41,12 @@ const ITEMS: MenuItem[] = [
     icon: <ImageIcon className="size-5" />,
     title: "Fondo",
     description: "Fondo del perfil",
+  },
+  {
+    id: "repos",
+    icon: <GitBranch className="size-5" />,
+    title: "Repos de GitHub",
+    description: "Repositorios destacados",
   },
   {
     id: "stickers",

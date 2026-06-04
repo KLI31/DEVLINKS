@@ -2,10 +2,9 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { userApi } from "@/lib/api/user.api";
-import { githubApi } from "@/lib/api/github.api";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import { getProfileUrl } from "@/lib/utils";
-import type { Project, GithubStats } from "@/types";
+import type { Project } from "@/types";
 
 interface PublicProfilePageProps {
   params: Promise<{ slug: string }>;
@@ -66,12 +65,7 @@ export default async function PublicProfilePage({
   const profile = await getCachedPublicProfile(slug);
   if (!profile) notFound();
 
-  const [projects, githubStats] = await Promise.all([
-    userApi.getPublicProjects(slug).catch(() => [] as Project[]),
-    profile.githubUsername
-      ? githubApi.getStats(profile.githubUsername).catch(() => null)
-      : Promise.resolve(null as GithubStats | null),
-  ]);
+  const projects = await userApi.getPublicProjects(slug).catch(() => [] as Project[]);
 
   const safeBgColor = isValidHex(profile.bgColor) ? profile.bgColor : "#0f172a";
   const safeAccentColor = isValidHex(profile.accentColor)
@@ -91,7 +85,6 @@ export default async function PublicProfilePage({
       <PublicProfileCard
         profile={profile}
         projects={projects}
-        githubStats={githubStats}
       />
     </main>
   );

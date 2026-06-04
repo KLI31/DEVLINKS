@@ -9,6 +9,9 @@ import type {
 } from "@/types/analytics";
 
 export const analyticsApi = {
+  trackLinkClick: (linkId: string) =>
+    apiService.post<void>(`/links/${linkId}/click`),
+
   getSummary: (days: 7 | 30 | 90) =>
     apiService.get<AnalyticsSummary>(`/analytics/summary?days=${days}`),
 
