@@ -23,12 +23,15 @@ import { Public } from './decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { AUTH_MESSAGES } from '../../common/messages';
 
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN ?? undefined;
+
 const ACCESS_COOKIE = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
-  maxAge: 15 * 60 * 1000, // 15 minutos
+  maxAge: 15 * 60 * 1000,
+  ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }),
 };
 
 const REFRESH_COOKIE = {
@@ -36,7 +39,8 @@ const REFRESH_COOKIE = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }),
 };
 
 @ApiTags('auth')
