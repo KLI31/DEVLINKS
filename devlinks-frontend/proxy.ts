@@ -97,6 +97,20 @@ function buildResponseWithTokens(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Inject real client IP for all API routes so the backend
+  // receives the visitor's IP instead of the Next.js server IP.
+  if (pathname.startsWith("/api/")) {
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp =
+      forwarded?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "";
+    if (!realIp) return NextResponse.next();
+    const headers = new Headers(request.headers);
+    headers.set("X-Client-IP", realIp);
+    return NextResponse.next({ request: { headers } });
+  }
+
   const isProtected = pathname.startsWith("/dashboard");
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
@@ -158,5 +172,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: ["/api/:path*", "/dashboard/:path*", "/login", "/register"],
 };
