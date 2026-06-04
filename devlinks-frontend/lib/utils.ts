@@ -10,7 +10,7 @@ function getPublicSiteOrigin(): string {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.NEXT_PUBLIC_ENV === "production"
-      ? "https://devlinks.nova11labs.dev"
+      ? "https://devlinks.lramdev.com"
       : "http://localhost:3000")
   );
 }
