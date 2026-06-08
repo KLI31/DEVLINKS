@@ -5,50 +5,12 @@ import { useDroppable } from "@dnd-kit/core";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import type { CustomizeValues, SaveStatus } from "../../hooks/useCustomize";
-import type { PlacedSticker, Project, LinkItem, GithubStats } from "@/types";
+import type { PlacedSticker } from "@/types";
 import { cn } from "@/lib/utils";
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
+import { usePreviewData } from "@/hooks/usePreviewData";
 import { ProfileSticker } from "./ProfileSticker";
 import { ProfilePreview } from "./ProfilePreview";
-
-const MOCK_LINKS: LinkItem[] = [
-  { id: "l1", title: "Portfolio", url: "https://dribbble.com", icon: "dribbble", previewImage: null, isPrimary: false, displayOrder: 0, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
-  { id: "l2", title: "Blog", url: "https://medium.com", icon: "medium", previewImage: null, isPrimary: false, displayOrder: 1, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
-  { id: "l3", title: "GitHub", url: "https://github.com", icon: "github", previewImage: null, isPrimary: true, displayOrder: 0, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
-  { id: "l4", title: "Twitter / X", url: "https://x.com", icon: "x", previewImage: null, isPrimary: true, displayOrder: 1, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
-  { id: "l5", title: "LinkedIn", url: "https://linkedin.com", icon: "linkedin", previewImage: null, isPrimary: true, displayOrder: 2, layout: "classic", isActive: true, createdAt: "", updatedAt: "" },
-];
-
-const MOCK_PROJECTS: Project[] = [
-  { id: "p1", title: "DevLinks", description: "Plataforma de links para desarrolladores", url: "https://github.com", githubRepo: "devlinks", stars: 12, language: "TypeScript", pinned: true, displayOrder: 0 },
-  { id: "p2", title: "Prueba-tecnica-OMC_LEADS", description: "Solución a prueba técnica de OMC", url: "https://github.com", githubRepo: "omc-leads", stars: 3, language: "TypeScript", pinned: true, displayOrder: 1 },
-  { id: "p3", title: "Cifra-it-prueba-tecnica", description: "Prueba técnica para desarrollador Frontend", url: "https://github.com", githubRepo: "cifra-it", stars: 1, language: "TypeScript", pinned: true, displayOrder: 2 },
-];
-
-const MOCK_STATS: GithubStats = {
-  user: {
-    login: "usuario",
-    name: "Usuario",
-    avatar_url: "",
-    public_repos: 46,
-    followers: 5,
-    following: 6,
-    bio: null,
-  },
-  topRepos: [
-    { id: 1, name: "repo1", description: null, html_url: "", stargazers_count: 3, forks_count: 0, language: "TypeScript", pushed_at: "", updated_at: "" },
-  ],
-  topLanguages: [{ language: "TypeScript", count: 20, pct: 80, color: "#3178c6" }],
-  totalRepos: 46,
-  followers: 5,
-  contributions: Array.from({ length: 196 }, (_, i) => ({
-    date: new Date(Date.now() - (196 - i) * 86400000).toISOString().split("T")[0],
-    count: Math.floor(Math.random() * 8),
-    level: Math.floor(Math.random() * 5) as 0 | 1 | 2 | 3 | 4,
-  })),
-  totalContributions: 150,
-  fetchedAt: Date.now(),
-};
 
 interface CustomizeCanvasProps {
   values: CustomizeValues;
@@ -99,6 +61,8 @@ export function CustomizeCanvas({
   const cardRef = useRef<HTMLDivElement>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
+  const { links, projects, githubStats } = usePreviewData(user);
+
   const isStickersMode = mode === "stickers";
 
   const dropId = isStickersMode ? "stickers-canvas" : "profile-card-canvas";
@@ -147,8 +111,8 @@ export function CustomizeCanvas({
         buttonTextColor: values.buttonTextColor,
         altTitleFont: values.altTitleFont,
         stickers: values.stickers,
-        links: MOCK_LINKS,
-        projects: MOCK_PROJECTS,
+        links,
+        projects,
       }
     : null;
 
@@ -205,9 +169,9 @@ export function CustomizeCanvas({
             {profile && (
               <ProfilePreview
                 profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
-                projects={MOCK_PROJECTS}
-                links={MOCK_LINKS}
-                githubStats={MOCK_STATS}
+                projects={projects}
+                links={links}
+                githubStats={githubStats}
                 layout={values.layout as "classic" | "hero"}
               />
             )}
@@ -228,9 +192,9 @@ export function CustomizeCanvas({
             {profile && (
               <ProfilePreview
                 profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
-                projects={MOCK_PROJECTS}
-                links={MOCK_LINKS}
-                githubStats={MOCK_STATS}
+                projects={projects}
+                links={links}
+                githubStats={githubStats}
                 layout={values.layout as "classic" | "hero"}
               />
             )}

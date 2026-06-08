@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import {
@@ -104,6 +104,7 @@ export function PublicProfileCard({
   hideShare = false,
 }: PublicProfileCardProps) {
   const { notifySuccess, notifyError } = useNotifications();
+  const reduceMotion = useReducedMotion();
   const coverRef = useRef<HTMLDivElement>(null);
 
   const [githubStats, setGithubStats] = useState<GithubStats | null>(
@@ -160,6 +161,7 @@ export function PublicProfileCard({
     : fontFamily;
 
   const bRadius = `${profile.buttonRadius ?? 8}px`;
+  const featuredRadius = `${Math.min(profile.buttonRadius ?? 8, 24)}px`;
   const bVariant = profile.buttonVariant ?? "solid";
   const isOutline = bVariant === "outline";
   const isGlass = bVariant === "glass";
@@ -569,7 +571,12 @@ export function PublicProfileCard({
             >
               Proyectos destacados
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${Math.min(projects.length, 3)}, minmax(0, 1fr))`,
+              }}
+            >
               {projects.map((project, i) => (
                 <motion.a
                   key={project.id}
@@ -680,7 +687,7 @@ export function PublicProfileCard({
                         : "min-h-13 w-full items-center  gap-3 px-4 py-3",
                     )}
                     style={{
-                      borderRadius: bRadius,
+                      borderRadius: isFeatured ? featuredRadius : bRadius,
                       ...(isFeatured
                         ? {
                             border: `1px solid ${bColor}35`,
@@ -706,8 +713,8 @@ export function PublicProfileCard({
                         height={120}
                         className="h-[120px] w-full object-cover"
                         style={{
-                          borderTopLeftRadius: bRadius,
-                          borderTopRightRadius: bRadius,
+                          borderTopLeftRadius: featuredRadius,
+                          borderTopRightRadius: featuredRadius,
                         }}
                         unoptimized
                       />
@@ -870,8 +877,9 @@ export function PublicProfileCard({
             );
             const color = meta?.brandColor ?? profile.accentColor;
             const size = Math.round(56 * (sticker.scale ?? 1));
+            const isFloating = Boolean(sticker.animated) && !reduceMotion;
             return (
-              <div
+              <motion.div
                 key={`${sticker.id}-${idx}`}
                 className="absolute"
                 style={{
@@ -881,8 +889,19 @@ export function PublicProfileCard({
                   height: size,
                   marginLeft: -size / 2,
                   marginTop: -size / 2,
-                  transform: `rotate(${sticker.rotation}deg)`,
+                  rotate: sticker.rotation,
                 }}
+                animate={isFloating ? { y: [0, -7, 0] } : undefined}
+                transition={
+                  isFloating
+                    ? {
+                        duration: 2.6 + (idx % 3) * 0.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: (idx % 4) * 0.25,
+                      }
+                    : undefined
+                }
               >
                 <div
                   className="absolute rounded-xl bg-white"
@@ -901,7 +920,7 @@ export function PublicProfileCard({
                   className="size-full select-none object-contain"
                   draggable={false}
                 />
-              </div>
+              </motion.div>
             );
           })}
         </div>

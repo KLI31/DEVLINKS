@@ -34,6 +34,13 @@ export default function CustomizePage() {
   const searchParams = useSearchParams();
   const isStickersMode = searchParams.get("section") === "stickers";
 
+  const animationEnabled =
+    values.stickers.length > 0 && values.stickers.every((s) => s.animated);
+
+  const handleToggleAnimation = (enabled: boolean) => {
+    updateStickers(values.stickers.map((s) => ({ ...s, animated: enabled })));
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current as {
       slug: string;
@@ -83,6 +90,7 @@ export default function CustomizePage() {
         y: Math.round(clampedY * 1000) / 10,
         rotation: Math.round((Math.random() * 16 - 8) * 10) / 10,
         scale: 1,
+        animated: animationEnabled,
       },
     ]);
   };
@@ -138,7 +146,11 @@ export default function CustomizePage() {
           />
 
           {isStickersMode && (
-            <StickersFloatingPanel placedCount={values.stickers.length} />
+            <StickersFloatingPanel
+              placedCount={values.stickers.length}
+              animationEnabled={animationEnabled}
+              onToggleAnimation={handleToggleAnimation}
+            />
           )}
         </div>
       </div>

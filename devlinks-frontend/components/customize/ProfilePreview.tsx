@@ -114,6 +114,7 @@ export function ProfilePreview({
       : parseInt(LEGACY_BUTTON_RADIUS[profile.buttonStyle] ?? "8px", 10);
   const effectiveButtonColor = profile.buttonColor || profile.accentColor;
   const buttonRadius = `${effectiveButtonRadius}px`;
+  const featuredRadius = `${Math.min(effectiveButtonRadius, 24)}px`;
 
   const cardBg =
     profile.bgType === "gradient"
@@ -454,7 +455,7 @@ export function ProfilePreview({
                         isFeatured ? "flex-col" : "min-h-[48px] items-center gap-3 px-4 py-2.5",
                       )}
                       style={{
-                        borderRadius: buttonRadius,
+                        borderRadius: isFeatured ? featuredRadius : buttonRadius,
                         ...(isFeatured
                           ? { border: `1px solid ${profile.accentColor}35`, background: `${profile.accentColor}08` }
                           : linkStyle),
@@ -465,8 +466,8 @@ export function ProfilePreview({
                           className="h-[90px] w-full bg-cover bg-center"
                           style={{
                             backgroundImage: `url(${link.previewImage})`,
-                            borderTopLeftRadius: buttonRadius,
-                            borderTopRightRadius: buttonRadius,
+                            borderTopLeftRadius: featuredRadius,
+                            borderTopRightRadius: featuredRadius,
                           }}
                         />
                       )}

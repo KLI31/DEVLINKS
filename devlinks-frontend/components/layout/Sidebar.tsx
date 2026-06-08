@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { useState, useRef } from "react";
 import { tooltipAnimation } from "@/lib/animations";
 import {
@@ -55,15 +55,18 @@ const navItems: IconEntry[] = [
 function NavTooltip({
   children,
   label,
+  disabled = false,
 }: {
   children: React.ReactNode;
   label: string;
+  disabled?: boolean;
 }) {
   const [show, setShow] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
 
   const handleMouseEnter = () => {
+    if (disabled) return;
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setTooltipStyle({
@@ -86,7 +89,7 @@ function NavTooltip({
     >
       {children}
       <AnimatePresence>
-        {show && (
+        {show && !disabled && (
           <motion.div
             style={tooltipStyle}
             initial={tooltipAnimation.initial}
@@ -106,7 +109,7 @@ function NavTooltip({
   );
 }
 
-function UserMenu() {
+function UserMenu({ expanded = false }: { expanded?: boolean }) {
   const { user, logout } = useAuthStore();
   const [open, setOpen] = useState(false);
 
@@ -128,28 +131,45 @@ function UserMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label="Tu cuenta"
-        className="relative overflow-visible rounded-full ring-2 transition-[box-shadow,transform] hover:scale-[1.03] hover:ring-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "group flex items-center transition-[box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          expanded
+            ? "w-full gap-2.5 rounded-xl px-2 py-1.5 hover:bg-accent"
+            : "relative overflow-visible rounded-full ring-2 hover:scale-[1.03] hover:ring-primary/25",
+        )}
       >
-        <Avatar className="h-10 w-10 overflow-hidden rounded-full  shadow-sm">
-          {user.avatarUrl && (
-            <AvatarImage src={user.avatarUrl} alt={user.displayName} />
-          )}
-          <AvatarFallback className="bg-muted text-sm font-medium text-muted-foreground">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        {user.githubUsername && (
-          <span
-            aria-hidden
-            className="absolute -right-1 -bottom-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[#24292e] ring-2 ring-background"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 text-white"
-              fill="currentColor"
+        <span className="relative shrink-0">
+          <Avatar className="h-10 w-10 overflow-hidden rounded-full shadow-sm">
+            {user.avatarUrl && (
+              <AvatarImage src={user.avatarUrl} alt={user.displayName} />
+            )}
+            <AvatarFallback className="bg-muted text-sm font-medium text-muted-foreground">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          {user.githubUsername && (
+            <span
+              aria-hidden
+              className="absolute -right-1 -bottom-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-[#24292e] ring-2 ring-background"
             >
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-            </svg>
+              <svg
+                viewBox="0 0 24 24"
+                className="h-2.5 w-2.5 text-white"
+                fill="currentColor"
+              >
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+              </svg>
+            </span>
+          )}
+        </span>
+        {expanded && (
+          <span className="flex min-w-0 flex-1 flex-col text-left">
+            <span className="truncate text-sm font-medium text-foreground">
+              {user.displayName}
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
+              {user.githubUsername ? `@${user.githubUsername}` : user.email}
+            </span>
           </span>
         )}
       </PopoverTrigger>
@@ -214,23 +234,49 @@ function UserMenu() {
   );
 }
 
+const EXPANDED_WIDTH = 248;
+const COLLAPSED_WIDTH = 80;
+
+const labelAnimation = {
+  initial: { opacity: 0, x: -6 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -6 },
+  transition: { duration: 0.18, ease: "easeOut" as const },
+};
+
 export function Sidebar() {
   const pathname = usePathname();
+  const reduce = useReducedMotion();
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <aside
+    <motion.aside
       aria-label="Navegación"
-      className="flex h-full min-h-0 w-[4.5rem] shrink-0 flex-col md:w-20"
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      initial={false}
+      animate={{ width: expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH }}
+      transition={
+        reduce
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 380, damping: 32 }
+      }
+      className="flex h-full min-h-0 shrink-0 flex-col"
     >
-      <div className="flex h-full max-h-[calc(100dvh-7.5rem)] min-h-[17rem] flex-col items-center justify-between overflow-y-auto scroll-thin rounded-2xl border border-border/70 bg-background px-2.5 py-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition-shadow duration-300 dark:ring-white/[0.06] md:rounded-3xl md:px-3">
-        <div className="flex flex-col items-center gap-1">
-          <nav className="mt-4 flex flex-col items-center gap-2.5">
+      <div className="flex h-full max-h-[calc(100dvh-7.5rem)] min-h-[17rem] flex-col items-stretch justify-between overflow-y-auto overflow-x-hidden scroll-thin rounded-2xl border border-border/70 bg-background px-2.5 py-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition-shadow duration-300 dark:ring-white/[0.06] md:rounded-3xl md:px-3">
+        <div className="flex flex-col">
+          <nav
+            className={cn(
+              "mt-4 flex flex-col gap-2.5",
+              expanded ? "items-stretch" : "items-center",
+            )}
+          >
             {navItems.map(({ id, icon: Icon, href, label }) => {
               const isActive =
                 pathname === href ||
                 (href !== "/dashboard" && pathname?.startsWith(href));
               return (
-                <NavTooltip key={id} label={label}>
+                <NavTooltip key={id} label={label} disabled={expanded}>
                   <motion.div
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
@@ -240,15 +286,35 @@ export function Sidebar() {
                       href={href}
                       aria-label={label}
                       className={cn(
-                        "flex h-11 w-11 items-center justify-center transition-all duration-200",
+                        "flex h-11 items-center transition-colors duration-200",
                         "text-muted-foreground hover:bg-accent hover:text-foreground",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        expanded
+                          ? "w-full justify-start gap-3 px-3"
+                          : "w-11 justify-center",
                         isActive
-                          ? "rounded-full bg-primary text-white shadow-[var(--shadow-hover)] hover:bg-primary/90 hover:text-white"
-                          : "rounded-xl",
+                          ? "bg-primary text-white shadow-[var(--shadow-hover)] hover:bg-primary/90 hover:text-white"
+                          : "",
+                        isActive && !expanded ? "rounded-full" : "rounded-xl",
                       )}
                     >
-                      <Icon className="h-5 w-5" strokeWidth={1.75} />
+                      <Icon
+                        className="h-5 w-5 shrink-0"
+                        strokeWidth={1.75}
+                      />
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.span
+                            initial={labelAnimation.initial}
+                            animate={labelAnimation.animate}
+                            exit={labelAnimation.exit}
+                            transition={labelAnimation.transition}
+                            className="whitespace-nowrap text-sm font-medium"
+                          >
+                            {label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </Link>
                   </motion.div>
                 </NavTooltip>
@@ -257,10 +323,15 @@ export function Sidebar() {
           </nav>
         </div>
 
-        <div className="flex flex-col items-center pt-20">
-          <UserMenu />
+        <div
+          className={cn(
+            "flex flex-col pt-20",
+            expanded ? "items-stretch" : "items-center",
+          )}
+        >
+          <UserMenu expanded={expanded} />
         </div>
       </div>
-    </aside>
+    </motion.aside>
   );
 }

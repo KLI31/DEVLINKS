@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Link2, ChevronDown } from "lucide-react";
 import type { LinkStat } from "@/types/analytics";
+import { iconUrl } from "@/lib/icons";
 import Image from "next/image";
 
 interface LinksProgressListProps {
@@ -16,7 +17,7 @@ function LinkIcon({ icon }: { icon: string | null }) {
     return <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />;
   return (
     <Image
-      src={icon}
+      src={iconUrl(icon)}
       width={16}
       height={16}
       alt={icon}

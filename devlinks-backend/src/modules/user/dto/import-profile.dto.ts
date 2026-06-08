@@ -245,6 +245,10 @@ class ImportStickerDto {
   @IsOptional()
   @IsNumber()
   scale?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  animated?: boolean;
 }
 
 class ImportProjectDto {

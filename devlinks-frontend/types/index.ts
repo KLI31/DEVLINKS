@@ -146,6 +146,7 @@ export interface PlacedSticker {
   y: number;
   rotation: number;
   scale?: number;
+  animated?: boolean;
 }
 
 export interface UpdateProfilePayload {

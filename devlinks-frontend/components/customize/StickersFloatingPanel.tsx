@@ -1,16 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Search, Sparkles } from "lucide-react";
+import { ChevronLeft, Search, Sparkles, Wind } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 import { StickerItem } from "@/components/customize/StickerItem";
+import { cn } from "@/lib/utils";
 
 interface StickersFloatingPanelProps {
   placedCount: number;
+  animationEnabled: boolean;
+  onToggleAnimation: (enabled: boolean) => void;
 }
 
-export function StickersFloatingPanel({ placedCount }: StickersFloatingPanelProps) {
+export function StickersFloatingPanel({
+  placedCount,
+  animationEnabled,
+  onToggleAnimation,
+}: StickersFloatingPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -73,6 +80,39 @@ export function StickersFloatingPanel({ placedCount }: StickersFloatingPanelProp
             {isFull && (
               <p className="mt-1 text-[9px] font-medium text-error">
                 Máximo alcanzado
+              </p>
+            )}
+          </div>
+
+          <div className="mx-3 mb-2">
+            <button
+              type="button"
+              onClick={() => onToggleAnimation(!animationEnabled)}
+              disabled={placedCount === 0}
+              aria-pressed={animationEnabled}
+              className="flex w-full items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-2.5 py-2 text-left transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Wind className="size-3.5 shrink-0 text-primary" />
+              <span className="flex-1 text-[11px] font-medium text-foreground">
+                Animar (flotando)
+              </span>
+              <span
+                className={cn(
+                  "relative h-4 w-7 shrink-0 rounded-full transition-colors",
+                  animationEnabled ? "bg-primary" : "bg-muted-foreground/30",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 size-3 rounded-full bg-white transition-transform",
+                    animationEnabled ? "translate-x-3.5" : "translate-x-0.5",
+                  )}
+                />
+              </span>
+            </button>
+            {placedCount === 0 && (
+              <p className="mt-1 text-[9px] text-muted-foreground">
+                Agrega stickers para animarlos
               </p>
             )}
           </div>

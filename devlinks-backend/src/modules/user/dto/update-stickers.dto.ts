@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -25,6 +26,10 @@ class StickerDto {
   @IsNumber()
   @IsOptional()
   scale?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  animated?: boolean;
 }
 
 export class UpdateStickersDto {
