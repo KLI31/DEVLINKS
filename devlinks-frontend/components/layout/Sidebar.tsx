@@ -116,6 +116,9 @@ function UserMenu({ expanded = false }: { expanded?: boolean }) {
   const handleLogout = async () => {
     await logout();
     setOpen(false);
+    // Navegación completa: limpia todos los stores en memoria y el Router
+    // Cache de Next, garantizando que el middleware revalide la sesión.
+    window.location.replace("/login");
   };
 
   if (!user) return null;
