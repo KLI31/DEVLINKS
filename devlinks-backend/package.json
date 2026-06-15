@@ -41,7 +41,7 @@
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "geoip-lite": "^1.4.10",
-    "helmet": "^8.1.0",
+    "helmet": "^8.2.0",
     "ioredis": "^5.10.1",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
