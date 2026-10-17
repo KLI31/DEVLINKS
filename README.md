@@ -35,7 +35,7 @@ Plataforma fullstack tipo **Linktree para desarrolladores**. Permite crear un pe
 
 ### Infraestructura
 - **Contenedores:** Docker & Docker Compose
-- **Proxy inverso:** Nginx (Alpine)
+- **Proxy inverso:** Dokploy / Traefik (SSL automático)
 - **Orquestación:** `Makefile`
 
 ---
@@ -91,7 +91,7 @@ make up      # Levantar todos los servicios
 | Servicio | URL |
 |----------|-----|
 | Aplicación Web | [http://localhost](http://localhost) |
-| API vía Nginx | [http://localhost/api](http://localhost/api) |
+| API | [http://localhost/api](http://localhost/api) |
 | Prisma Studio | `make studio` → [http://localhost:5555](http://localhost:5555) |
 
 ---
@@ -162,7 +162,6 @@ DevLink-project/
 │   ├── hooks/                 # Custom React hooks
 │   ├── store/                 # Zustand stores
 │   └── public/                # Assets estáticos
-├── nginx/                     # Configuración de Nginx
 ├── docker-compose.yml         # Orquestación de desarrollo
 ├── docker-compose.prod.yml    # Orquestación de producción
 └── Makefile                   # Comandos de automatización

@@ -61,9 +61,6 @@ build-backend: ## Rebuild solo del backend
 build-frontend: ## Rebuild solo del frontend
 	docker compose up -d --build frontend
 
-build-nginx: ## Rebuild solo del nginx
-	docker compose up -d --build nginx
-
 build-redis: ## Rebuild solo el redis
 	docker compose up -d --build redis
 
@@ -79,9 +76,6 @@ down-backend: ## Bajar el backend
 down-frontend: ## Bajar el frontend
 	docker compose down frontend
 
-down-nginx: ## Bajar el nginx
-	docker compose down nginx
-
 down-redis: ## Bajar el redis
 	docker compose down redis
 down-all: ## Bajar todos los contenedores
@@ -91,9 +85,6 @@ stop-backend: ## Detener el backend
 
 stop-frontend: ## Detener el frontend
 	docker compose stop frontend
-
-stop-nginx: ## Detener el nginx
-	docker compose stop nginx
 
 stop-redis: ## Detener el redis
 	docker compose stop redis
