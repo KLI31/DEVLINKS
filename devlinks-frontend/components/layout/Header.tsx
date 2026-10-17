@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Star, Sun, Moon, Monitor, LogIn, ChevronDown } from "lucide-react";
+import { Sun, Moon, Monitor, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+import { BrandIcon } from "@/components/layout/BrandIcon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useScrollTransparent } from "@/hooks/use-scroll-transparent";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export function Header() {
         "fixed top-4 left-1/2 z-50 -translate-x-1/2",
         "w-[min(96vw,72rem)]",
         "flex items-center justify-between gap-4 rounded-full border px-3 py-2 sm:px-4",
-        "transition-all duration-300 ease-out",
+        "transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out",
         isScrolled
           ? "border-border/60 bg-background/55 shadow-hover backdrop-blur-xl supports-[backdrop-filter]:bg-background/45"
           : "border-transparent bg-transparent shadow-none backdrop-blur-0",
@@ -66,40 +67,30 @@ export function Header() {
           priority
         />
         <span className="hidden font-bold tracking-tight text-foreground sm:inline">
-          DevLinks
+          devlinks
+          <span className="animate-caret-blink text-primary" aria-hidden>
+            _
+          </span>
+        </span>
+        <span className="hidden rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
+          beta
         </span>
       </Link>
 
       <div className="flex items-center gap-1.5">
-        <div className="group relative">
-          <a
-            href="https://github.com/Nova11-Labs/devlinks"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Dale una estrella en GitHub"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon-sm" }),
-              "rounded-full text-muted-foreground hover:text-yellow-400",
-            )}
-          >
-            <motion.span
-              className="inline-flex"
-              whileHover={{ rotate: 360, scale: 1.15 }}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-            >
-              <Star className="size-4 transition-colors group-hover:fill-yellow-400" />
-            </motion.span>
-          </a>
-          <span
-            role="tooltip"
-            className={cn(
-              "pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 -translate-y-1 whitespace-nowrap rounded-md border border-border/60 bg-popover/95 px-2.5 py-1 text-xs font-medium text-popover-foreground opacity-0 shadow-lg backdrop-blur-xl transition-all duration-150",
-              "group-hover:translate-y-0 group-hover:opacity-100",
-            )}
-          >
-            Danos una estrellita
-          </span>
-        </div>
+        <a
+          href="https://github.com/Nova11-Labs/devlinks"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Dale una estrella a DevLinks en GitHub"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "hidden gap-1.5 rounded-full bg-card/60 text-muted-foreground transition-[background-color,color] hover:text-foreground sm:inline-flex",
+          )}
+        >
+          <BrandIcon name="github" className="size-4" />
+          Star
+        </a>
 
         <div className="relative" ref={themeMenuRef}>
           <Button
@@ -120,7 +111,7 @@ export function Header() {
             </span>
             <ChevronDown
               className={cn(
-                "size-3 opacity-50 transition-transform",
+                "size-3 opacity-50 transition-transform duration-150",
                 isThemeOpen && "rotate-180",
               )}
             />
@@ -164,27 +155,24 @@ export function Header() {
           </AnimatePresence>
         </div>
 
-        <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-
         <Link
           href="/login"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "gap-1.5 rounded-full text-muted-foreground hover:text-foreground",
+            "rounded-full text-muted-foreground hover:text-foreground",
           )}
         >
-          <LogIn className="size-4" />
-          <span className="hidden sm:inline">Ingresar</span>
+          Ingresar
         </Link>
 
         <Link
           href="/register"
           className={cn(
             buttonVariants({ size: "sm" }),
-            "rounded-full px-4 text-xs font-semibold shadow-sm",
+            "rounded-full px-4 text-xs font-semibold shadow-sm transition-[scale,background-color] duration-150 ease-out active:scale-[0.96]",
           )}
         >
-          Quiero mi DevLink
+          Crear mi DevLink
         </Link>
       </div>
     </header>

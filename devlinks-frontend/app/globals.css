@@ -343,6 +343,94 @@
   }
 }
 
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(12px);
+  }
+}
+
+@keyframes hero-card {
+  from {
+    opacity: 0;
+    transform: translateY(40px) rotate(0deg);
+  }
+}
+
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.animate-hero-rise {
+  animation: hero-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(var(--i, 0) * 100ms);
+}
+
+.animate-hero-card {
+  transform: rotate(var(--r, 0deg));
+  animation: hero-card 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-rise,
+  .animate-hero-card {
+    animation-name: hero-fade;
+  }
+}
+
+/* Sin JS el contenido queda visible; RevealObserver añade .reveal-ready y .is-visible */
+.reveal-ready .reveal {
+  transition:
+    opacity 600ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 600ms cubic-bezier(0.23, 1, 0.32, 1),
+    filter 600ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.reveal-ready .reveal:not(.is-visible) {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-ready .reveal:not(.is-visible) {
+    filter: none;
+    transform: none;
+  }
+}
+
+/* Contador 0 → 60 del hero */
+@property --count {
+  syntax: "<integer>";
+  initial-value: 60;
+  inherits: false;
+}
+
+@keyframes count-up {
+  from {
+    --count: 0;
+  }
+}
+
+.animate-count {
+  counter-reset: count var(--count);
+  animation: count-up 1200ms cubic-bezier(0.23, 1, 0.32, 1) 500ms both;
+}
+
+.animate-count::after {
+  content: counter(count, decimal-leading-zero);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-count {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee,
   .animate-marquee-vertical {
@@ -453,4 +541,82 @@
 .w-tc-editor code[class*='language-json'] .token.null,
 .w-tc-editor pre[class*='language-json'] .token.null {
   color: var(--json-boolean-color) !important;
+}
+/* Brillo que cruza el badge "60 segundos" */
+.sheen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.sheen::before {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 40%;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    rgb(255 255 255 / 0.55),
+    transparent
+  );
+  animation: sheen-sweep 3.5s cubic-bezier(0.4, 0, 0.2, 1) 1.8s infinite;
+  translate: -120% 0;
+}
+
+@keyframes sheen-sweep {
+  0% {
+    translate: -120% 0;
+  }
+  40%,
+  100% {
+    translate: 300% 0;
+  }
+}
+
+/* Stickers holográficos alrededor del hero (SVG en HoloSticker.tsx) */
+.holo-sticker {
+  position: absolute;
+  width: clamp(7rem, 8vw, 10rem);
+  height: clamp(7rem, 8vw, 10rem);
+  overflow: visible;
+  filter: drop-shadow(0 18px 18px rgb(0 0 0 / 0.22))
+    drop-shadow(0 2px 3px rgb(0 0 0 / 0.18));
+  rotate: var(--r, 0deg);
+  pointer-events: auto;
+  transition:
+    rotate 300ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 300ms cubic-bezier(0.23, 1, 0.32, 1);
+  animation:
+    sticker-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0ms) both,
+    sticker-float 6s ease-in-out var(--d, 0ms) infinite;
+}
+
+.holo-sticker:hover {
+  rotate: 0deg;
+  scale: 1.12;
+}
+
+@keyframes sticker-pop {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+
+@keyframes sticker-float {
+  50% {
+    translate: 0 -10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheen::before {
+    display: none;
+  }
+  .holo-sticker {
+    animation: none;
+  }
 }
