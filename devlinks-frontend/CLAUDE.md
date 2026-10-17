@@ -190,7 +190,7 @@ Métricas adicionales a instrumentar (de `analisis-mejoras.md`):
 
 - **Owner:** Nova 11 Labs
 - **Bóveda Obsidian:** `C:\Users\lramb\Documents\Nova 11 Labs\Nova 11 Labs\Desarrollo Nova\DevLink`
-- **Repositorio:** _pendiente_
+- **Repositorio:** *pendiente*
 - **Dominio:** `devlinks.nova11labs.dev`
 
 ---
@@ -200,3 +200,7 @@ Métricas adicionales a instrumentar (de `analisis-mejoras.md`):
 Si descubres una regla nueva, una convención o una decisión que un agente futuro debería conocer, **actualiza este archivo**. Mantenerlo vivo es lo que lo hace útil.
 
 Última actualización: 2026-04-29.
+
+## 11. Lecturas obligatorias
+
+Antes de empezar una iteración, lee siempre las reglas en `../.claude/rules.md`. Ahí encontrarás la estructura ideal para manejar la arquitectura del proyecto.

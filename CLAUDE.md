@@ -8,7 +8,7 @@ DevLinks is a Linktree-style platform built for developers, with GitHub stats in
 
 - **Frontend**: `devlinks-frontend/` — Next.js 16 App Router, React 19, Tailwind v4, shadcn/ui
 - **Backend**: `devlinks-backend/` — NestJS 11, Prisma 6, PostgreSQL 16, Redis 7
-- **Proxy**: Nginx routes `/api/*` → backend:3001, everything else → frontend
+- **Proxy**: Dokploy / Traefik routes `/api/*` → backend:3001, everything else → frontend (SSL automático)
 
 ## Commands
 
@@ -49,7 +49,7 @@ cd devlinks-backend && npx jest src/modules/auth/auth.service.spec.ts
 
 ### Request flow
 
-Browser → Nginx (`:80`) → Next.js frontend OR backend API at `/api/*`
+Browser → Dokploy / Traefik (HTTPS) → Next.js frontend OR backend API at `/api/*`
 
 Next.js also rewrites `/api/:path*` to `NEXT_PUBLIC_API_URL` for SSR requests. The backend is at port 3001 internally and never exposed directly in production.
 
