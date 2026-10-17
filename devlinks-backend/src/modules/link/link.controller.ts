@@ -22,20 +22,10 @@ import { ReorderLinksDto } from './dto/reorder-links.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guards';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { assertSafeUrl } from '../../common/utils/url-validator';
+import { fetchHtmlSafely } from '../../common/utils/safe-html-fetch';
+import { getClientIp } from '../../common/utils/client-ip';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
-
-function extractIp(req: Request): string {
-  const clientIp = req.headers['x-client-ip'];
-  if (typeof clientIp === 'string' && clientIp) return clientIp.trim();
-
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded)
-    return forwarded.split(',')[0].trim();
-
-  return req.socket?.remoteAddress ?? '127.0.0.1';
-}
 import * as cheerio from 'cheerio';
 
 @ApiTags('links')
@@ -60,21 +50,9 @@ export class LinkController {
     if (!url) {
       throw new BadRequestException({ error: 'Failed to fetch' });
     }
-    assertSafeUrl(url);
 
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'Twitterbot/1.0' },
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeout));
-
-      if (!response.ok) {
-        throw new BadRequestException({ error: 'Failed to fetch' });
-      }
-
-      const html = await response.text();
+      const html = await fetchHtmlSafely(url);
       const $ = cheerio.load(html);
 
       const getMeta = (property: string) =>
@@ -142,7 +120,7 @@ export class LinkController {
       return { message: 'Link no encontrado' };
     }
 
-    const ip = extractIp(req);
+    const ip = getClientIp(req);
     const userAgent = req.headers['user-agent'];
     const referrer = req.headers['referer'];
 

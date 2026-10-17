@@ -10,6 +10,42 @@ const COOKIE_BASE = {
   path: "/",
 };
 
+const IPV4_PATTERN = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_PATTERN = /^[0-9a-fA-F:]+$/;
+
+function sanitizeIp(value: string | null | undefined): string | null {
+  const ip = value?.trim();
+  if (!ip) return null;
+
+  if (IPV4_PATTERN.test(ip)) {
+    const octets = ip.split(".").map(Number);
+    return octets.every((octet) => octet >= 0 && octet <= 255) ? ip : null;
+  }
+
+  if (ip.includes(":") && IPV6_PATTERN.test(ip)) return ip;
+
+  return null;
+}
+
+function safeRedirectTarget(
+  raw: string | null,
+  requestUrl: string,
+): URL {
+  const fallback = new URL("/dashboard", requestUrl);
+  if (!raw) return fallback;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) {
+    return fallback;
+  }
+
+  try {
+    const target = new URL(raw, requestUrl);
+    if (target.origin !== new URL(requestUrl).origin) return fallback;
+    return target;
+  } catch {
+    return fallback;
+  }
+}
+
 // Decode JWT payload and check expiry locally — no network call needed.
 function isTokenExpired(token: string): boolean {
   try {
@@ -97,20 +133,20 @@ function buildResponseWithTokens(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Inject real client IP for analytics routes so the backend
-  // receives the visitor's IP instead of the Vercel server IP.
-  if (
-    pathname.startsWith("/api/links/") ||
-    pathname.startsWith("/api/user/")
-  ) {
+  // Inject real client IP for all API routes so the backend keys rate
+  // limiting and analytics on the visitor, not on the proxy hop.
+  if (pathname.startsWith("/api/")) {
     const forwarded = request.headers.get("x-forwarded-for");
     const realIp =
-      forwarded?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
-      "";
-    if (!realIp) return NextResponse.next();
+      sanitizeIp(forwarded?.split(",")[0]?.trim()) ??
+      sanitizeIp(request.headers.get("x-real-ip"));
+
     const headers = new Headers(request.headers);
-    headers.set("X-Client-IP", realIp);
+    if (realIp) {
+      headers.set("X-Client-IP", realIp);
+    } else {
+      headers.delete("X-Client-IP");
+    }
     return NextResponse.next({ request: { headers } });
   }
 
@@ -146,9 +182,7 @@ export async function proxy(request: NextRequest) {
   if (isAuthPage) {
     if (accessToken && !isTokenExpired(accessToken)) {
       const redirectTo = request.nextUrl.searchParams.get("redirect");
-      return NextResponse.redirect(
-        new URL(redirectTo || "/dashboard", request.url),
-      );
+      return NextResponse.redirect(safeRedirectTarget(redirectTo, request.url));
     }
 
     if (refreshToken) {
@@ -156,7 +190,7 @@ export async function proxy(request: NextRequest) {
       if (newTokens) {
         const redirectTo = request.nextUrl.searchParams.get("redirect");
         const redirectResponse = NextResponse.redirect(
-          new URL(redirectTo || "/dashboard", request.url),
+          safeRedirectTarget(redirectTo, request.url),
         );
         redirectResponse.cookies.set("accessToken", newTokens.accessToken, {
           ...COOKIE_BASE,
@@ -176,8 +210,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/api/links/:path*",
-    "/api/user/:path*",
+    "/api/:path*",
     "/dashboard/:path*",
     "/login",
     "/register",

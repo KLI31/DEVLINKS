@@ -1,18 +1,29 @@
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CustomLogger } from './common/logger/custom-logger';
+import { isTrustedProxy } from './common/utils/client-ip';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new CustomLogger(),
   });
 
-  app.use(helmet());
+  app.set('trust proxy', isTrustedProxy);
+  app.disable('x-powered-by');
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'same-site' },
+      referrerPolicy: { policy: 'no-referrer' },
+    }),
+  );
   app.use(cookieParser());
 
   const allowedOrigins = process.env.CORS_ORIGIN
