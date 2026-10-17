@@ -40,7 +40,7 @@ function TechPill({ tech }: { tech: Tech }) {
     <span
       className={cn(
         "inline-flex shrink-0 items-center gap-2.5 rounded-full",
-        "border border-white/10 bg-white/[0.03] px-4 py-2",
+        "border border-border bg-card px-4 py-2",
         "text-sm font-medium text-foreground/85",
         "transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-foreground",
       )}
@@ -60,20 +60,20 @@ function TechPill({ tech }: { tech: Tech }) {
 
 export function TechMarquee() {
   return (
-    <section className="relative mx-auto w-[min(96vw,72rem)] py-20 sm:py-24">
-      <div className=" mx-auto">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+    <section className="py-20">
+      <div className="px-6 sm:px-10">
+        <div className="reveal mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
             Funciona con tu <span className="text-second">stack favorito.</span>
           </h2>
-          <p className="mt-5 text-base text-muted-foreground sm:text-lg">
+          <p className="mt-5 font-[family-name:var(--font-inter)] text-lg text-pretty text-muted-foreground">
             Linkea repos, despliegues, perfiles y herramientas — sin importar
             con qué construyas. Si tiene URL, cabe en tu DevLink.
           </p>
         </div>
       </div>
 
-      <div className="relative mt-12 [mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)]">
+      <div className="reveal relative mt-12 [mask-image:linear-gradient(to_right,transparent,#000_8%,#000_92%,transparent)]">
         <Marquee pauseOnHover className="py-2">
           {ROW_A.map((tech) => (
             <TechPill key={tech.slug} tech={tech} />

@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useReducedMotion,
-  type Variants,
-} from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,31 +44,6 @@ const FAQS: FaqItem[] = [
   },
 ];
 
-const containerVariants: Variants = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.05 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
-  },
-};
-
-const headerVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
-  },
-};
-
 function FaqAccordionItem({
   item,
   isOpen,
@@ -96,10 +66,7 @@ function FaqAccordionItem({
   );
 
   return (
-    <motion.div
-      variants={reducedMotion ? undefined : itemVariants}
-      className="border-b border-border"
-    >
+    <div className="border-b border-border">
       <h3>
         <button
           type="button"
@@ -118,9 +85,11 @@ function FaqAccordionItem({
             {item.question}
           </span>
           <motion.span
-            animate={reducedMotion ? undefined : { rotate: isOpen ? 180 : 0 }}
+            animate={{ rotate: isOpen ? 180 : 0 }}
             transition={
-              reducedMotion ? undefined : { duration: 0.25, ease: "easeOut" }
+              reducedMotion
+                ? { duration: 0 }
+                : { duration: 0.25, ease: "easeOut" }
             }
             className="shrink-0"
           >
@@ -140,12 +109,12 @@ function FaqAccordionItem({
             id={`faq-answer-${item.id}`}
             role="region"
             aria-labelledby={`faq-question-${item.id}`}
-            initial={reducedMotion ? undefined : { height: 0, opacity: 0 }}
-            animate={reducedMotion ? undefined : { height: "auto", opacity: 1 }}
-            exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             transition={
               reducedMotion
-                ? undefined
+                ? { duration: 0 }
                 : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }
             }
             className="overflow-hidden"
@@ -156,7 +125,7 @@ function FaqAccordionItem({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -169,32 +138,17 @@ export function FaqSection() {
   }, []);
 
   return (
-    <section
-      id="faq"
-      className="relative w-[min(96vw,72rem)] mx-auto py-24 sm:py-28"
-    >
-      <motion.div
-        variants={reducedMotion ? undefined : headerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.5 }}
-        className="mx-auto max-w-2xl text-center"
-      >
+    <section id="faq" className="scroll-mt-24 px-6 py-24 sm:px-10 sm:py-28">
+      <div className="reveal mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
           Preguntas <span className="text-primary">frecuentes</span>
         </h2>
         <p className="mt-5 text-base text-muted-foreground sm:text-lg">
           Todo lo que necesitas saber antes de empezar a usar DevLinks.
         </p>
-      </motion.div>
+      </div>
 
-      <motion.div
-        variants={reducedMotion ? undefined : containerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.15 }}
-        className="mt-14 mx-auto max-w-3xl"
-      >
+      <div className="reveal mx-auto mt-14 max-w-3xl">
         {FAQS.map((item) => (
           <FaqAccordionItem
             key={item.id}
@@ -204,7 +158,7 @@ export function FaqSection() {
             reducedMotion={!!reducedMotion}
           />
         ))}
-      </motion.div>
+      </div>
     </section>
   );
 }

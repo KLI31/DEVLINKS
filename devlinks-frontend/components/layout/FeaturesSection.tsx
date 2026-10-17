@@ -1,216 +1,261 @@
-"use client";
+import { QRCodeSVG } from "qrcode.react";
+import { Check, ChevronRight, Download, Star } from "lucide-react";
 
-import Image from "next/image";
-import { motion } from "motion/react";
-import { BarChart3, Braces, Globe, Link2, QrCode } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type FeatureItem = {
-  title: string;
-  accent: string;
-  accentColor: "primary" | "second";
-  description: string;
-  imageSrc?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  reversed?: boolean;
-};
-
-const FEATURES: FeatureItem[] = [
-  {
-    title: "Conecta GitHub y luce tu perfil técnico",
-    accent: "GitHub",
-    accentColor: "primary",
-    description:
-      "Sincroniza tus repositorios, métricas y actividad para mostrar credibilidad real en una sola vista.",
-    imageSrc: "/feature-1.png",
-    icon: Globe,
-  },
-  {
-    title: "Analytics que sí te ayudan a mejorar",
-    accent: "Analytics",
-    accentColor: "second",
-    description:
-      "Mide clics por enlace, rendimiento por canal y comportamiento de visitantes para optimizar conversiones.",
-    imageSrc: "/feature-2.png",
-    icon: BarChart3,
-    reversed: true,
-  },
-  {
-    title: "Un solo link, todas tus plataformas",
-    accent: "Un solo link",
-    accentColor: "primary",
-    description:
-      "Agrupa tu portafolio, redes, blog y contacto en una página rápida, ordenada y fácil de compartir.",
-    imageSrc: "/feature-3.png",
-    icon: Link2,
-  },
-  {
-    title: "Comparte en segundos con QR y enlace corto",
-    accent: "QR",
-    accentColor: "second",
-    description:
-      "Genera y publica tu perfil por QR en eventos, CV o redes para que te encuentren al instante.",
-    icon: QrCode,
-    imageSrc: "/feature-5.png",
-    reversed: true,
-  },
-  {
-    title: "Crea tu perfil automáticamente con JSON",
-    accent: "JSON",
-    accentColor: "primary",
-    description:
-      "Importa tu configuración en formato JSON para construir tu perfil en segundos y mantenerlo versionado.",
-    imageSrc: "/feature-6.png",
-    icon: Braces,
-  },
-];
-
-function FeatureVisual({
-  label,
-  imageSrc,
-}: {
-  label: string;
-  imageSrc?: string;
-}) {
-  const hasImage = Boolean(imageSrc);
-
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-      whileHover={{ y: -3 }}
-      className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-muted/70 via-muted/40 to-background p-5 shadow-sm sm:p-6"
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/20 blur-2xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-second/15 blur-2xl"
-        aria-hidden
-      />
-
-      {hasImage ? (
-        <div className="overflow-hidden rounded-2xl border border-dashed border-border bg-background/80">
-          <Image
-            src={imageSrc!}
-            alt={`Preview visual de ${label}`}
-            width={1200}
-            height={750}
-            className="h-auto w-full object-cover"
-            priority={false}
-          />
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-border bg-background/80 p-4 sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/90">
-            {label}
-          </p>
-        </div>
-      )}
-    </motion.div>
+    <p className="inline-flex h-fit items-center gap-1 text-sm font-medium text-primary">
+      {children}
+      <ChevronRight className="size-4" aria-hidden />
+    </p>
   );
 }
 
-const FeaturesSection = () => {
+function Prompt({ children }: { children: React.ReactNode }) {
   return (
-    <section className="mx-auto w-[min(96vw,72rem)] py-20">
-      <div className="mx-auto max-w-2xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-          Features <span className="text-second">esenciales</span> para crecer
-          <span className="text-primary"> tu perfil</span>
-        </h2>
-        <p className="mt-5 text-base text-muted-foreground sm:text-lg">
-          Cada bloque está organizado como en tu referencia: texto en un lado e
-          idea de imagen en el otro, alternando por fila.
-        </p>
-      </div>
-
-      <div className="mt-16">
-        {FEATURES.map((feature) => (
-          <article
-            key={feature.title}
-            className="grid items-center gap-8 border-t border-border/60 py-12 first:border-t-0 first:pt-0 sm:grid-cols-2 sm:gap-10 sm:py-16 md:gap-12"
-          >
-            {feature.reversed ? (
-              <>
-                <div>
-                  <FeatureVisual
-                    label={feature.title}
-                    imageSrc={feature.imageSrc}
-                  />
-                </div>
-                <div className="rounded-2xl p-2 sm:p-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="mb-4 inline-flex items-center rounded-xl border border-border bg-background/80 px-4 py-3"
-                  >
-                    <feature.icon className="size-5 text-primary" />
-                  </motion.div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-foreground">
-                    {feature.title.split(feature.accent)[0]}
-                    <span
-                      className={
-                        feature.accentColor === "primary"
-                          ? "text-primary"
-                          : "text-second"
-                      }
-                    >
-                      {feature.accent}
-                    </span>
-                    {feature.title.split(feature.accent)[1]}
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                    {feature.description}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="rounded-2xl p-2 sm:p-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="mb-4 inline-flex items-center rounded-xl border border-border bg-background/80 px-4 py-3"
-                  >
-                    <feature.icon className="size-5 text-primary" />
-                  </motion.div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-foreground">
-                    {feature.title.split(feature.accent)[0]}
-                    <span
-                      className={
-                        feature.accentColor === "primary"
-                          ? "text-primary"
-                          : "text-second"
-                      }
-                    >
-                      {feature.accent}
-                    </span>
-                    {feature.title.split(feature.accent)[1]}
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                    {feature.description}
-                  </p>
-                </div>
-                <div>
-                  <FeatureVisual
-                    label={feature.title}
-                    imageSrc={feature.imageSrc}
-                  />
-                </div>
-              </>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
+    <p className="w-fit max-w-[85%] rounded-xl border border-border bg-card px-4 py-3 text-sm text-card-foreground shadow-card">
+      {children}
+    </p>
   );
-};
+}
 
-export default FeaturesSection;
+function Panel({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-border bg-card text-card-foreground shadow-card",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function GitHubMockup() {
+  const repos = [
+    { name: "ui-kit", stars: "1.2k", lang: "TypeScript" },
+    { name: "dotfiles", stars: "340", lang: "Shell" },
+    { name: "react-hooks", stars: "212", lang: "TypeScript" },
+  ];
+
+  return (
+    <Panel className="mx-auto mt-5 w-[88%]">
+      <ul className="divide-y divide-border text-sm">
+        {repos.map((repo) => (
+          <li
+            key={repo.name}
+            className="flex items-center justify-between px-4 py-2.5"
+          >
+            <span>{repo.name}</span>
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+              <Star className="size-3" aria-hidden />
+              {repo.stars}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+        <div className="flex justify-between">
+          <span>Sincronizando · 48 repos</span>
+          <span className="text-foreground tabular-nums">64%</span>
+        </div>
+        <div className="mt-2 h-1.5 rounded-full bg-muted">
+          <div className="h-full w-[64%] rounded-full bg-foreground" />
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function AnalyticsMockup() {
+  const links = [
+    { title: "Portafolio", clicks: 412, width: "w-full" },
+    { title: "Curso de React", clicks: 268, width: "w-[65%]" },
+    { title: "Newsletter", clicks: 97, width: "w-[24%]" },
+  ];
+
+  return (
+    <Panel className="mx-auto mt-5 w-[88%] p-4">
+      <p className="text-xs text-muted-foreground">Últimos 7 días</p>
+      <p className="mt-0.5 font-semibold">777 clics · 3 links</p>
+      <ul className="mt-4 space-y-3 text-xs">
+        {links.map((link) => (
+          <li key={link.title}>
+            <div className="flex justify-between">
+              <span>{link.title}</span>
+              <span className="text-muted-foreground tabular-nums">
+                {link.clicks}
+              </span>
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full bg-second", link.width)}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function QrMockup() {
+  return (
+    <Panel className="mx-auto mt-5 w-[88%] overflow-hidden">
+      <div className="flex justify-center bg-white p-5">
+        <QRCodeSVG value="https://devlinks.lramdev.com/u/leomarin" size={104} />
+      </div>
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground">Perfil público</p>
+        <p className="mt-0.5 text-sm font-semibold">/u/leomarin</p>
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background">
+          <Download className="size-3.5" aria-hidden />
+          Descargar QR
+        </span>
+      </div>
+    </Panel>
+  );
+}
+
+const FLOW = [
+  {
+    prompt: "Conecta mi GitHub y destaca mis mejores repos",
+    title: "Tu GitHub, siempre al día.",
+    description:
+      "Repos, stars y seguidores se sincronizan solos y se refrescan cada 6 horas.",
+    tint: "from-primary/20 to-primary/5",
+    Mockup: GitHubMockup,
+  },
+  {
+    prompt: "¿Qué link me trajo más visitas esta semana?",
+    title: "Analíticas por link.",
+    description:
+      "Clics, países y dispositivos para saber qué contenido sí funciona.",
+    tint: "from-second/20 to-second/5",
+    Mockup: AnalyticsMockup,
+  },
+  {
+    prompt: "Necesito un QR para mi charla del viernes",
+    title: "Compártelo en cualquier lado.",
+    description:
+      "Un enlace corto y un QR listos para tu CV, slides o networking.",
+    tint: "from-muted to-muted/30",
+    Mockup: QrMockup,
+  },
+];
+
+const IMPORT_STEPS = ["Perfil y bio", "6 links ordenados", "GitHub conectado"];
+
+export default function FeaturesSection() {
+  return (
+    <>
+      <section className="reveal grid gap-6 px-6 py-20 sm:px-10 md:grid-cols-[1fr_1.4fr] md:gap-12">
+        <Eyebrow>Presentando DevLinks</Eyebrow>
+        <div className="space-y-6 font-[family-name:var(--font-inter)] text-lg leading-relaxed text-pretty text-muted-foreground">
+          <p>
+            <strong className="font-semibold text-foreground">
+              Tu trabajo como developer está disperso.
+            </strong>{" "}
+            El GitHub por un lado, el portafolio por otro, tus charlas en un
+            tweet de hace dos años y el CV en un PDF que nadie abre.
+          </p>
+          <p>
+            <strong className="font-semibold text-foreground">
+              DevLinks lo junta en un solo link.
+            </strong>{" "}
+            Tus repos, stats y enlaces en una página rápida, con analíticas por
+            link y un QR para compartir en cualquier evento, sin configurar
+            nada.
+          </p>
+        </div>
+      </section>
+
+      <section className="px-6 py-20 sm:px-10">
+        <div className="reveal mx-auto max-w-2xl text-center">
+          <Eyebrow>Todo en un solo flujo</Eyebrow>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-balance text-foreground sm:text-5xl">
+            Conecta, mide, comparte. Un solo link.
+          </h2>
+          <p className="mt-5 font-[family-name:var(--font-inter)] text-lg text-pretty text-muted-foreground">
+            La mayoría junta un Linktree, un README y una hoja de cálculo para
+            mostrar lo que hace. DevLinks lo resuelve en una sola página.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
+          {FLOW.map(({ prompt, title, description, tint, Mockup }) => (
+            <article key={title} className="reveal">
+              <div
+                aria-hidden
+                className={cn(
+                  "h-80 overflow-hidden rounded-2xl bg-linear-to-b p-5 pb-0 sm:h-[22rem]",
+                  tint,
+                )}
+              >
+                <Prompt>{prompt}</Prompt>
+                <Mockup />
+              </div>
+              <p className="mt-4 font-[family-name:var(--font-inter)] text-pretty text-muted-foreground">
+                <strong className="font-semibold text-foreground">
+                  {title}
+                </strong>{" "}
+                {description}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-6 py-20 sm:px-10">
+        <h2 className="reveal text-3xl font-bold tracking-tight text-balance text-foreground sm:text-4xl">
+          Tu perfil, versionado como tu código.
+        </h2>
+        <p className="reveal mt-5 max-w-3xl font-[family-name:var(--font-inter)] text-lg leading-relaxed text-pretty text-muted-foreground">
+          Importa tu perfil desde un JSON y DevLinks crea tus links, tu bio y tu
+          conexión con GitHub en segundos. Guárdalo en tu repo y restáuralo
+          cuando quieras.
+        </p>
+
+        <div
+          aria-hidden
+          className="reveal relative mt-12 grid gap-6 md:grid-cols-[1fr_1.5fr] md:items-start"
+        >
+          <Prompt>Importa mi perfil desde devlinks.json</Prompt>
+          <Panel className="overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5 text-xs">
+              <span className="font-semibold">devlinks.json</span>
+              <span className="text-muted-foreground">JSON válido</span>
+            </div>
+            <pre className="overflow-x-auto p-4 text-xs leading-relaxed text-muted-foreground">
+              {`{
+  "username": "leomarin",
+  "bio": "Frontend · Open source",
+  "github": "leomarin",
+  "links": [
+    { "title": "Mi sitio", "url": "https://leo.dev" },
+    { "title": "Curso de React", "url": "https://..." }
+  ]
+}`}
+            </pre>
+            <ul className="space-y-2 border-t border-border p-4 text-sm">
+              {IMPORT_STEPS.map((step) => (
+                <li key={step} className="flex items-center gap-2">
+                  <Check className="size-4 text-primary" />
+                  {step}
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      </section>
+    </>
+  );
+}

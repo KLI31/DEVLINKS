@@ -39,7 +39,9 @@ export function CardReview({ review, className }: CardReviewProps) {
           <p className="truncate text-sm font-semibold text-foreground">
             {review.name}
           </p>
-          <p className="truncate text-xs text-muted-foreground">{review.role}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {review.role}
+          </p>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           {Array.from({ length: review.rating }).map((_, i) => (
