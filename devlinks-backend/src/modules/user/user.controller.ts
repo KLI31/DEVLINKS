@@ -25,19 +25,9 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { GithubService } from '../github/github.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { getClientIp } from '../../common/utils/client-ip';
 import type { JwtValidatedUser } from '../auth/strategies/jwt.strategy';
 import type { Request } from 'express';
-
-function extractIp(req: Request): string {
-  const clientIp = req.headers['x-client-ip'];
-  if (typeof clientIp === 'string' && clientIp) return clientIp.trim();
-
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded)
-    return forwarded.split(',')[0].trim();
-
-  return req.socket?.remoteAddress ?? '127.0.0.1';
-}
 
 @ApiTags('user')
 @ApiCookieAuth('accessToken')
@@ -59,7 +49,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   getLocationSuggestion(@Req() req: Request) {
-    return this.userService.getLocationSuggestion(extractIp(req));
+    return this.userService.getLocationSuggestion(getClientIp(req));
   }
 
   @Patch('me')
@@ -163,7 +153,7 @@ export class UserController {
   ) {
     const profile = await this.userService.getPublicProfile(username);
 
-    const ip = extractIp(req);
+    const ip = getClientIp(req);
     const userAgent = req.headers['user-agent'];
     const referrer = req.headers['referer'];
 
