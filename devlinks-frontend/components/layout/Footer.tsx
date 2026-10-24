@@ -11,6 +11,7 @@ const NAV = [
     links: [
       { label: "Crear mi DevLink", href: "/register", external: false },
       { label: "Ingresar", href: "/login", external: false },
+      { label: "Precios", href: "/#precios", external: false },
       { label: "Preguntas frecuentes", href: "/#faq", external: false },
     ],
   },
@@ -39,7 +40,7 @@ const linkClass =
 
 export function Footer() {
   return (
-    <footer className="relative z-10 mx-auto w-[min(96vw,72rem)] border-x border-t border-dashed border-border/70 [border-left-style:solid] [border-right-style:solid]">
+    <footer className="relative z-10 mx-auto w-[min(96vw,72rem)] border-x border-foreground/20">
       <div className="grid gap-10 px-6 py-14 sm:px-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <Link
@@ -118,7 +119,7 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-dashed border-border/70 px-6 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-10">
+      <div className="flex flex-col gap-2 border-t border-foreground/20 px-6 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-10">
         <p>
           © {new Date().getFullYear()} DevLinks · Hecho por{" "}
           <span className="text-foreground">Nova 11 Labs</span>

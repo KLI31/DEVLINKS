@@ -6,6 +6,7 @@ import FeaturesSection from "@/components/layout/FeaturesSection";
 import { TechMarquee } from "@/components/layout/TechMarquee";
 import { CtaSection } from "@/components/layout/CtaSection";
 import { Footer } from "@/components/layout/Footer";
+import { PricingSection } from "@/components/layout/PricingSection";
 import { FaqSection } from "@/components/layout/FaqSection";
 import { ScrollToTopButton } from "@/components/layout/ScrollToTopButton";
 import { RevealObserver } from "@/components/layout/RevealObserver";
@@ -64,9 +65,14 @@ export default function Home() {
       <Header />
       <main className="relative z-10 flex min-h-screen flex-col">
         <Hero />
-        <div className="mx-auto w-[min(96vw,72rem)] divide-y divide-dashed divide-border/70 border-x border-t border-dashed border-border/70 [border-left-style:solid] [border-right-style:solid]">
+        <div className="relative mx-auto w-[min(96vw,72rem)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 border-x border-foreground/20 [mask-image:linear-gradient(to_bottom,transparent,black_6rem)]"
+          />
           <FeaturesSection />
           <TechMarquee />
+          <PricingSection />
           <FaqSection />
           <CtaSection />
         </div>
