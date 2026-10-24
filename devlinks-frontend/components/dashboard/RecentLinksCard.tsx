@@ -3,16 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Link2, ArrowRight } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
 import type { LinkItem } from "@/types";
-import { tooltipAnimation } from "@/lib/animations";
+import type { LinkStat } from "@/types/analytics";
 import { getIconUrl } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+import { Panel } from "./Panel";
 
-const MotionLink = motion.create(Link);
+const MAX_ROWS = 6;
 
 interface RecentLinksCardProps {
   links: LinkItem[];
+  stats: LinkStat[];
 }
 
 function getLinkIconUrl(icon: string | null): string | null {
@@ -24,36 +25,29 @@ function getLinkIconUrl(icon: string | null): string | null {
   }
 }
 
-export function RecentLinksCard({ links }: RecentLinksCardProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const activeLinks = links.filter((l) => l.isActive);
-
-  const totalLinks = links.length;
-
-  const rowHoverMotion = prefersReducedMotion
-    ? undefined
-    : { x: 4, y: -1, rotate: 0.4 };
-
-  const footerArrowVariants = {
-    rest: { x: 0 },
-    hover: prefersReducedMotion ? { x: 0 } : { x: 5 },
-  } as const;
+export function RecentLinksCard({ links, stats }: RecentLinksCardProps) {
+  const clicksById = new Map(stats.map((s) => [s.id, s.clicks]));
+  const rows = links.slice(0, MAX_ROWS);
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border/70 bg-card px-5 py-4 sm:px-6 flex flex-col gap-4",
-        "transition-shadow duration-300 hover:shadow-hover",
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Mis links</h2>
-        <span className="font-mono text-xs text-muted-foreground">
-          {totalLinks} / 20
-        </span>
+    <Panel className="flex min-w-0 flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-foreground">Mis links</h2>
+          <span className="rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+            {links.length} / 20
+          </span>
+        </div>
+        <Link
+          href="/dashboard/links"
+          className="inline-flex h-11 items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+        >
+          Ver más
+          <ArrowRight className="size-3" />
+        </Link>
       </div>
 
-      {activeLinks.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Link2 className="h-6 w-6 text-primary" />
@@ -63,83 +57,80 @@ export function RecentLinksCard({ links }: RecentLinksCardProps) {
           </p>
           <Link
             href="/dashboard/links"
-            className="inline-flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-sm font-medium shadow-xs transition-all hover:bg-muted hover:text-foreground"
+            className="inline-flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-sm font-medium shadow-xs transition-colors hover:bg-muted hover:text-foreground"
           >
             Agregar link
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col">
-          {activeLinks.map((link) => {
-            const iconUrl = getLinkIconUrl(link.icon);
-            return (
-              <motion.div
-                key={link.id}
-                className={cn(
-                  "flex items-center gap-3.5 py-2.5 px-2 sm:px-3 rounded-lg border-b border-border/50 last:border-0",
-                  "hover:bg-muted/45",
-                )}
-                whileHover={rowHoverMotion}
-                transition={tooltipAnimation.transition}
-              >
-                {iconUrl ? (
-                  <Image
-                    src={iconUrl}
-                    alt={link.title}
-                    width={20}
-                    height={20}
-                    loading="lazy"
-                    unoptimized
-                    className="shrink-0 rounded-sm object-contain"
-                  />
-                ) : (
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-primary/10">
-                    <Link2 className="h-3 w-3 text-primary" />
-                  </div>
-                )}
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium text-foreground">
-                    {link.title}
-                  </span>
-                  <span className="truncate font-mono text-xs text-muted-foreground max-w-[10rem]">
-                    {link.url}
-                  </span>
-                </div>
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                    link.isActive
-                      ? "bg-emerald-500/10 text-emerald-600"
-                      : "bg-muted text-muted-foreground opacity-60",
-                  )}
-                >
-                  {link.isActive ? "activo" : "inactivo"}
-                </span>
-              </motion.div>
-            );
-          })}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-medium">Link</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">URL</th>
+                <th className="px-4 py-3 text-right font-medium">Clics</th>
+                <th className="px-4 py-3 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {rows.map((link) => {
+                const iconUrl = getLinkIconUrl(link.icon);
+                return (
+                  <tr key={link.id} className="transition-colors duration-150 hover:bg-muted/30">
+                    <td className="max-w-[12rem] px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {iconUrl ? (
+                          <Image
+                            src={iconUrl}
+                            alt=""
+                            width={20}
+                            height={20}
+                            loading="lazy"
+                            unoptimized
+                            className="shrink-0 rounded-sm object-contain"
+                          />
+                        ) : (
+                          <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-primary/10">
+                            <Link2 className="size-3 text-primary" />
+                          </div>
+                        )}
+                        <span className="truncate font-medium text-foreground">
+                          {link.title}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="hidden max-w-[16rem] truncate px-4 py-3 font-mono text-xs text-muted-foreground md:table-cell">
+                      {link.url}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-foreground">
+                      {clicksById.get(link.id) ?? 0}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium",
+                          link.isActive
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "size-1.5 rounded-full",
+                            link.isActive ? "bg-emerald-500" : "bg-muted-foreground",
+                          )}
+                        />
+                        {link.isActive ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-
-      <MotionLink
-        href="/dashboard/links"
-        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        initial="rest"
-        whileHover={prefersReducedMotion ? undefined : "hover"}
-        variants={{
-          rest: {},
-          hover: {},
-        }}
-      >
-        Gestionar todos
-        <motion.span
-          className="inline-flex"
-          variants={footerArrowVariants}
-          transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
-        >
-          <ArrowRight className="h-3 w-3" />
-        </motion.span>
-      </MotionLink>
-    </div>
+    </Panel>
   );
 }

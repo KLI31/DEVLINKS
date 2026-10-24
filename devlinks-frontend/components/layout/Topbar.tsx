@@ -1,13 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ShareProfileModal } from "./ShareProfileModal";
+import { getNavLabel } from "./Sidebar";
+
+const iconButtonClass =
+  "h-11 rounded-xl border border-border/70 bg-card px-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const themes = [
   { value: "light", label: "Claro", icon: Sun },
@@ -20,6 +24,7 @@ type TopbarProps = {
 };
 
 export function Topbar({ className }: TopbarProps) {
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
@@ -45,26 +50,16 @@ export function Topbar({ className }: TopbarProps) {
   return (
     <header
       className={cn(
-        "flex h-14 shrink-0 items-center justify-between rounded-2xl  bg-background/90 px-4  ring-1 ring-black/[0.04] backdrop-blur-md transition-shadow duration-300 dark:bg-background/80   md:h-[3.75rem] md:rounded-3xl md:px-5",
+        "flex h-16 shrink-0 items-center justify-between gap-4 px-4 md:h-[4.5rem] md:px-6",
         className,
       )}
     >
-      <div className="flex items-center gap-2">
-        <Image
-          src="/logo.svg"
-          alt="DevLinks"
-          width={28}
-          height={18}
-          className="shrink-0"
-          priority
-        />
-        <span className="text-sm font-semibold tracking-tight text-foreground md:text-base">
-          DevLinks
-        </span>
-      </div>
+      <p className="truncate text-lg font-semibold tracking-tight text-foreground">
+        {getNavLabel(pathname)}
+      </p>
 
-      <div className="flex items-center gap-1">
-        <ShareProfileModal />
+      <div className="flex items-center gap-2">
+        <ShareProfileModal className={iconButtonClass} />
 
         <div className="relative" ref={themeMenuRef}>
           <Button
@@ -72,7 +67,8 @@ export function Topbar({ className }: TopbarProps) {
             variant="ghost"
             size="sm"
             className={cn(
-              "h-10 min-h-11 gap-1 rounded-full px-3 text-muted-foreground transition-colors hover:bg-accent/80 hover:text-foreground sm:min-h-10",
+              iconButtonClass,
+              "gap-1",
               isThemeOpen && "bg-accent text-foreground",
             )}
             onClick={() => setIsThemeOpen((v) => !v)}
@@ -81,8 +77,8 @@ export function Topbar({ className }: TopbarProps) {
             aria-haspopup="menu"
           >
             <span className="relative flex size-4 items-center justify-center">
-              <Sun className="absolute size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <Sun className="absolute size-4 rotate-0 scale-100 transition-[rotate,scale] motion-reduce:transition-none dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute size-4 rotate-90 scale-0 transition-[rotate,scale] motion-reduce:transition-none dark:rotate-0 dark:scale-100" />
             </span>
             <ChevronDown
               className={cn(

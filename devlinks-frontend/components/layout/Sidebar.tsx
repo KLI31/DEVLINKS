@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { useState, useRef } from "react";
+import { motion, AnimatePresence, MotionConfig } from "motion/react";
+import { useState, useRef, useSyncExternalStore } from "react";
 import { tooltipAnimation } from "@/lib/animations";
 import {
   Home,
@@ -14,6 +15,9 @@ import {
   FileJson,
   Settings,
   LogOut,
+  ChevronsUpDown,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,52 +30,112 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-type IconEntry = { id: string; icon: LucideIcon; href: string; label: string };
+type IconEntry = {
+  id: string;
+  icon: LucideIcon;
+  href: string;
+  label: string;
+  section: "main" | "tools" | "footer";
+};
 
 const navItems: IconEntry[] = [
-  { id: "home", icon: Home, href: "/dashboard", label: "Inicio" },
-  { id: "links", icon: Link2, href: "/dashboard/links", label: "Links" },
+  {
+    id: "home",
+    icon: Home,
+    href: "/dashboard",
+    label: "Inicio",
+    section: "main",
+  },
+  {
+    id: "links",
+    icon: Link2,
+    href: "/dashboard/links",
+    label: "Links",
+    section: "main",
+  },
   {
     id: "analytics",
     icon: BarChart3,
     href: "/dashboard/analytics",
     label: "Analíticas",
+    section: "main",
   },
   {
     id: "customize",
     icon: Palette,
     href: "/dashboard/customize",
     label: "Personalización",
+    section: "main",
   },
   {
     id: "import",
     icon: FileJson,
     href: "/dashboard/import",
     label: "Importar / Exportar",
+    section: "tools",
   },
   {
     id: "settings",
     icon: Settings,
     href: "/dashboard/settings",
     label: "Ajustes",
+    section: "footer",
   },
 ];
+
+const COLLAPSED_KEY = "sidebar-collapsed";
+
+const indicatorTransition = {
+  type: "spring",
+  stiffness: 500,
+  damping: 38,
+} as const;
+
+// El layout no cambia al colapsar: solo el ancho del aside (que recorta) y la
+// opacidad del texto. Al expandir, el texto aparece cuando ya hay espacio.
+function fade(collapsed: boolean) {
+  return cn(
+    "opacity-0 transition-opacity duration-150 ease-out motion-reduce:transition-none",
+    !collapsed && "lg:opacity-100 lg:delay-100",
+  );
+}
+
+// Preferencia por navegador; en SSR se asume expandido para evitar mismatch.
+function subscribeCollapsed(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function getCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setCollapsedPref(value: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0");
+  } catch {}
+  window.dispatchEvent(new StorageEvent("storage", { key: COLLAPSED_KEY }));
+}
 
 function NavTooltip({
   children,
   label,
-  disabled = false,
+  collapsed,
 }: {
   children: React.ReactNode;
   label: string;
-  disabled?: boolean;
+  collapsed: boolean;
 }) {
   const [show, setShow] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
 
   const handleMouseEnter = () => {
-    if (disabled) return;
+    if (!collapsed && window.matchMedia("(min-width: 1024px)").matches) return;
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setTooltipStyle({
@@ -94,7 +158,7 @@ function NavTooltip({
     >
       {children}
       <AnimatePresence>
-        {show && !disabled && (
+        {show && (
           <motion.div
             style={tooltipStyle}
             initial={tooltipAnimation.initial}
@@ -114,7 +178,7 @@ function NavTooltip({
   );
 }
 
-function UserMenu({ expanded = false }: { expanded?: boolean }) {
+function UserMenu({ collapsed }: { collapsed: boolean }) {
   const { user, logout } = useAuthStore();
   const [open, setOpen] = useState(false);
 
@@ -140,10 +204,7 @@ function UserMenu({ expanded = false }: { expanded?: boolean }) {
       <PopoverTrigger
         aria-label="Tu cuenta"
         className={cn(
-          "group flex items-center transition-[box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          expanded
-            ? "w-full gap-2.5 rounded-xl px-2 py-1.5 hover:bg-accent"
-            : "relative overflow-visible rounded-full ring-2 hover:scale-[1.03] hover:ring-primary/25",
+          "group flex w-full items-center gap-2.5 rounded-xl p-0.5 transition-colors duration-150 hover:bg-card/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
       >
         <span className="relative shrink-0">
@@ -170,16 +231,25 @@ function UserMenu({ expanded = false }: { expanded?: boolean }) {
             </span>
           )}
         </span>
-        {expanded && (
-          <span className="flex min-w-0 flex-1 flex-col text-left">
-            <span className="truncate text-sm font-medium text-foreground">
-              {user.displayName}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {user.githubUsername ? `@${user.githubUsername}` : user.email}
-            </span>
+        <span
+          className={cn(
+            "flex min-w-0 flex-1 flex-col text-left",
+            fade(collapsed),
+          )}
+        >
+          <span className="truncate text-sm font-medium text-foreground">
+            {user.displayName}
           </span>
-        )}
+          <span className="truncate text-xs text-muted-foreground">
+            {user.githubUsername ? `@${user.githubUsername}` : user.email}
+          </span>
+        </span>
+        <ChevronsUpDown
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground",
+            fade(collapsed),
+          )}
+        />
       </PopoverTrigger>
       <PopoverContent
         side="right"
@@ -248,101 +318,188 @@ function UserMenu({ expanded = false }: { expanded?: boolean }) {
   );
 }
 
-const EXPANDED_WIDTH = 248;
-const COLLAPSED_WIDTH = 80;
+export function getNavLabel(pathname: string | null) {
+  return (
+    navItems.find(
+      ({ href }) => href !== "/dashboard" && pathname?.startsWith(href),
+    )?.label ?? navItems[0].label
+  );
+}
 
-const labelAnimation = {
-  initial: { opacity: 0, x: -6 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -6 },
-  transition: { duration: 0.18, ease: "easeOut" as const },
+type NavLinkProps = IconEntry & {
+  collapsed: boolean;
+  isHovered: boolean;
+  onHover: (id: string) => void;
 };
 
-export function Sidebar() {
+function NavLink({
+  id,
+  icon: Icon,
+  href,
+  label,
+  collapsed,
+  isHovered,
+  onHover,
+}: NavLinkProps) {
   const pathname = usePathname();
-  const reduce = useReducedMotion();
-  const [expanded, setExpanded] = useState(false);
+  const isActive =
+    pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
 
   return (
-    <motion.aside
-      aria-label="Navegación"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-      initial={false}
-      animate={{ width: expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH }}
-      transition={
-        reduce
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 380, damping: 32 }
-      }
-      className="flex h-full min-h-0 shrink-0 flex-col"
-    >
-      <div className="flex h-full max-h-[calc(100dvh-7.5rem)] min-h-[17rem] flex-col items-stretch justify-between overflow-y-auto overflow-x-hidden scroll-thin rounded-2xl border border-border/70 bg-background px-2.5 py-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition-shadow duration-300 dark:ring-white/[0.06] md:rounded-3xl md:px-3">
-        <div className="flex flex-col">
-          <nav
-            className={cn(
-              "mt-4 flex flex-col gap-2.5",
-              expanded ? "items-stretch" : "items-center",
-            )}
-          >
-            {navItems.map(({ id, icon: Icon, href, label }) => {
-              const isActive =
-                pathname === href ||
-                (href !== "/dashboard" && pathname?.startsWith(href));
-              return (
-                <NavTooltip key={id} label={label} disabled={expanded}>
-                  <motion.div
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <Link
-                      href={href}
-                      aria-label={label}
-                      className={cn(
-                        "flex h-11 items-center transition-colors duration-200",
-                        "text-muted-foreground hover:bg-accent hover:text-foreground",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        expanded
-                          ? "w-full justify-start gap-3 px-3"
-                          : "w-11 justify-center",
-                        isActive
-                          ? "bg-primary text-white shadow-[var(--shadow-hover)] hover:bg-primary/90 hover:text-white"
-                          : "",
-                        isActive && !expanded ? "rounded-full" : "rounded-xl",
-                      )}
-                    >
-                      <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
-                      <AnimatePresence initial={false}>
-                        {expanded && (
-                          <motion.span
-                            initial={labelAnimation.initial}
-                            animate={labelAnimation.animate}
-                            exit={labelAnimation.exit}
-                            transition={labelAnimation.transition}
-                            className="whitespace-nowrap text-sm font-medium"
-                          >
-                            {label}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </Link>
-                  </motion.div>
-                </NavTooltip>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div
+    <NavTooltip label={label} collapsed={collapsed}>
+      <Link
+        href={href}
+        aria-label={label}
+        aria-current={isActive ? "page" : undefined}
+        onMouseEnter={() => onHover(id)}
+        onFocus={() => onHover(id)}
+        className={cn(
+          "group relative flex h-11 w-full items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium",
+          "transition-[color,scale] duration-150 ease-out motion-safe:active:scale-[0.96]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          isActive
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {isActive && (
+          <motion.span
+            layoutId="sidebar-active"
+            transition={indicatorTransition}
+            className="absolute inset-0 rounded-xl bg-card shadow-[var(--shadow-card)]"
+          />
+        )}
+        {isHovered && !isActive && (
+          <motion.span
+            layoutId="sidebar-hover"
+            transition={indicatorTransition}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 rounded-xl bg-card/60"
+          />
+        )}
+        <Icon
           className={cn(
-            "flex flex-col pt-20",
-            expanded ? "items-stretch" : "items-center",
+            "relative size-5 shrink-0 transition-transform duration-200 ease-out motion-safe:group-hover:scale-110",
+            isActive && "text-primary",
+          )}
+          strokeWidth={1.75}
+        />
+        <span
+          className={cn(
+            "relative whitespace-nowrap",
+            fade(collapsed),
           )}
         >
-          <UserMenu expanded={expanded} />
+          {label}
+        </span>
+      </Link>
+    </NavTooltip>
+  );
+}
+
+export function Sidebar() {
+  const collapsed = useSyncExternalStore(
+    subscribeCollapsed,
+    getCollapsed,
+    () => false,
+  );
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const main = navItems.filter((i) => i.section === "main");
+  const tools = navItems.filter((i) => i.section === "tools");
+  const footer = navItems.filter((i) => i.section === "footer");
+
+  const renderLink = (item: IconEntry) => (
+    <NavLink
+      key={item.id}
+      {...item}
+      collapsed={collapsed}
+      isHovered={hoveredId === item.id}
+      onHover={setHoveredId}
+    />
+  );
+
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <aside
+        aria-label="Navegación"
+        className={cn(
+          "scroll-thin flex h-full w-[3.75rem] shrink-0 flex-col overflow-y-auto overflow-x-hidden px-2 py-2",
+          "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+          !collapsed && "lg:w-60",
+        )}
+      >
+        <div className="group/header relative flex h-11 shrink-0 items-center">
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex h-11 min-w-0 items-center gap-2.5 rounded-xl px-2 transition-opacity duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              collapsed &&
+                "lg:group-hover/header:opacity-0 lg:group-has-[button:focus-visible]/header:opacity-0",
+            )}
+          >
+            <Image
+              src="/logo.svg"
+              alt="DevLinks"
+              width={28}
+              height={18}
+              className="shrink-0"
+              priority
+            />
+            <span
+              className={cn(
+                "whitespace-nowrap text-base font-semibold tracking-tight text-foreground",
+                fade(collapsed),
+              )}
+            >
+              DevLinks
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCollapsedPref(!collapsed)}
+            aria-label={
+              collapsed ? "Expandir barra lateral" : "Contraer barra lateral"
+            }
+            aria-expanded={!collapsed}
+            className={cn(
+              "absolute top-1 right-1 hidden size-9 items-center justify-center rounded-lg text-muted-foreground transition-[opacity,background-color,color,scale] duration-150 ease-out hover:bg-card/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-[0.94] lg:flex",
+              collapsed &&
+                "opacity-0 group-hover/header:opacity-100 focus-visible:opacity-100",
+            )}
+          >
+            <ToggleIcon className="size-4.5" strokeWidth={1.75} />
+          </button>
         </div>
-      </div>
-    </motion.aside>
+
+        <nav
+          onMouseLeave={() => setHoveredId(null)}
+          onBlur={() => setHoveredId(null)}
+          className="mt-6 flex flex-1 flex-col gap-1"
+        >
+          {main.map(renderLink)}
+
+          <div className="mx-2 my-4 h-px bg-border/70" />
+          <p
+            className={cn(
+              "px-3 pb-2 text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-muted-foreground",
+              fade(collapsed),
+            )}
+          >
+            Herramientas
+          </p>
+          {tools.map(renderLink)}
+
+          <div className="mt-auto flex flex-col gap-1 pt-6">
+            {footer.map(renderLink)}
+            <div className="mx-2 my-3 h-px bg-border/70" />
+            <UserMenu collapsed={collapsed} />
+          </div>
+        </nav>
+      </aside>
+    </MotionConfig>
   );
 }
