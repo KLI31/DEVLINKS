@@ -554,7 +554,10 @@ export function PublicProfileCard({
               {statsItems.map(({ label, value, Icon, iconColor }, i) => (
                 <div
                   key={label}
-                  className="animate-card-rise flex flex-col items-center gap-1.5 px-4 first:pl-0"
+                  className={cn(
+                    "animate-card-rise flex flex-col items-center first:pl-0",
+                    demo ? "gap-1 px-3.5" : "gap-1.5 px-4",
+                  )}
                   style={
                     {
                       "--i": i,
@@ -567,19 +570,25 @@ export function PublicProfileCard({
                   <dd className="flex items-center gap-1.5">
                     <Icon
                       aria-hidden="true"
-                      className="size-5"
+                      className={demo ? "size-3.5" : "size-5"}
                       strokeWidth={2.25}
                       style={{ color: iconColor }}
                     />
                     <span
-                      className="text-[22px] font-semibold tabular-nums leading-none"
+                      className={cn(
+                        "font-semibold tabular-nums leading-none",
+                        demo ? "text-[15px]" : "text-[22px]",
+                      )}
                       style={{ color: textPrimary }}
                     >
                       {value}
                     </span>
                   </dd>
                   <dt
-                    className="text-[14px] leading-tight"
+                    className={cn(
+                      "leading-tight",
+                      demo ? "text-[11px]" : "text-[14px]",
+                    )}
                     style={{ color: textMuted }}
                   >
                     {label}
