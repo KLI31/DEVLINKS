@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,102 +15,98 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { restrictToParentElement } from "@dnd-kit/modifiers";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { AnimatePresence, motion } from "motion/react";
-import { Link2 } from "lucide-react";
+import { Link2, Plus } from "lucide-react";
 import { linksApi } from "@/lib/api";
 import { resolveErrorMessage } from "@/lib/messages";
 import { useLinksStore } from "@/store/links-store";
-import { LinkCard } from "./LinkCard";
 import { useNotifications } from "@/hooks/use-notifications";
+import { Button } from "@/components/ui/button";
+import { LinkCard } from "./LinkCard";
 
-export function LinkList() {
+interface LinkListProps {
+  onAdd: () => void;
+}
+
+export function LinkList({ onAdd }: LinkListProps) {
   const { links, setLinks } = useLinksStore();
   const { notifyError } = useNotifications();
-  const [isReordering, setIsReordering] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
 
     const oldIndex = links.findIndex((l) => l.id === active.id);
     const newIndex = links.findIndex((l) => l.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = arrayMove(links, oldIndex, newIndex);
     const previous = links;
-
-    const withOrder = reordered.map((link, index) => ({
+    const reordered = arrayMove(links, oldIndex, newIndex).map((link, index) => ({
       ...link,
       displayOrder: index,
     }));
 
-    setLinks(withOrder);
-    setIsReordering(true);
+    setLinks(reordered);
 
     try {
       await linksApi.reorder(
-        withOrder.map((l) => ({ id: l.id, displayOrder: l.displayOrder })),
+        reordered.map((l) => ({ id: l.id, displayOrder: l.displayOrder })),
       );
     } catch (err) {
       setLinks(previous);
       notifyError(resolveErrorMessage(err));
-    } finally {
-      setIsReordering(false);
     }
   };
 
   if (links.length === 0) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="flex flex-col items-center gap-4 rounded-[18px] border border-dashed border-border py-14 text-center"
       >
-        <Link2 className="size-10 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">
-          Aún no tienes ningún link.
-        </p>
+        <div className="flex size-11 items-center justify-center rounded-xl bg-muted">
+          <Link2 className="size-5 text-muted-foreground" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">Aún no tienes links</p>
+          <p className="text-xs text-muted-foreground">
+            Agrega tu GitHub, portfolio o redes para empezar.
+          </p>
+        </div>
+        <Button onClick={onAdd} variant="outline" className="h-11 cursor-pointer gap-2">
+          <Plus className="size-4" />
+          Agregar link
+        </Button>
       </motion.div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToParentElement]}
-        onDragEnd={handleDragEnd}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={links.map((l) => l.id)}
+        strategy={verticalListSortingStrategy}
       >
-        <SortableContext
-          items={links.map((l) => l.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="flex flex-col gap-2">
-            <AnimatePresence initial={false} mode="popLayout">
-              {links.map((link) => (
-                <LinkCard key={link.id} link={link} />
-              ))}
-            </AnimatePresence>
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {isReordering && (
-        <p className="px-2 text-xs text-muted-foreground">
-          Guardando orden...
-        </p>
-      )}
-    </div>
+        <div className="flex flex-col gap-2">
+          <AnimatePresence initial={false}>
+            {links.map((link) => (
+              <LinkCard key={link.id} link={link} />
+            ))}
+          </AnimatePresence>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

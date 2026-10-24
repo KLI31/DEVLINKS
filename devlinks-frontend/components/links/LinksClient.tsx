@@ -1,68 +1,55 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { motion, useReducedMotion } from "motion/react";
-import { Plus } from "lucide-react";
+import { MotionConfig, motion } from "motion/react";
+import { ExternalLink, Eye, Plus } from "lucide-react";
 import type { UserProfile, PublicProfile, LinkItem } from "@/types";
 import { useLinksStore } from "@/store/links-store";
-import { useAuthStore } from "@/store/auth-store";
 import { userApi } from "@/lib/api/user.api";
+import { getScheduleState } from "@/lib/links";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { LinkList } from "./LinkList";
 import { LinkFormModal } from "./LinkFormModal";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
-import { iconUrl } from "@/lib/icons";
+
+const MAX_LINKS = 20;
 
 interface LinksClientProps {
   initialLinks: LinkItem[];
   userProfile: UserProfile | null;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 export function LinksClient({ initialLinks, userProfile: initialUserProfile }: LinksClientProps) {
   const { links, setLinks } = useLinksStore();
-  const { user: authUser } = useAuthStore();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(initialUserProfile);
-  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     setLinks(initialLinks);
   }, [initialLinks, setLinks]);
 
-  // Server-side fetch may fail (no access token in SSR); retry client-side
+  // El fetch SSR puede fallar (sin access token en el servidor); se reintenta en cliente.
   useEffect(() => {
     if (!userProfile) {
       userApi.me().then(setUserProfile).catch(() => {});
     }
   }, [userProfile]);
 
-  const handleAdd = () => {
-    setSheetOpen(true);
-  };
-
-  const isLimitReached = links.length >= 20;
+  const isLimitReached = links.length >= MAX_LINKS;
 
   const activeSortedLinks = useMemo(
     () =>
       [...links]
-        .filter((l) => l.isActive)
+        .filter((l) => l.isActive && ["none", "live"].includes(getScheduleState(l)))
         .sort((a, b) => a.displayOrder - b.displayOrder),
     [links],
-  );
-
-  const primaryLinks = useMemo(
-    () => activeSortedLinks.filter((l) => l.isPrimary),
-    [activeSortedLinks],
   );
 
   const previewProfile: PublicProfile | null = useMemo(() => {
@@ -101,120 +88,99 @@ export function LinksClient({ initialLinks, userProfile: initialUserProfile }: L
     };
   }, [userProfile, activeSortedLinks]);
 
-  return (
-    <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-1 gap-6"
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <div className="flex items-center gap-4">
-          <div className="flex size-14 items-center justify-center overflow-hidden rounded-full bg-muted ring-2 ring-border">
-            {(userProfile?.avatarUrl ?? authUser?.avatarUrl) ? (
-              <Image
-                src={(userProfile?.avatarUrl ?? authUser?.avatarUrl)!}
-                alt={(userProfile?.displayName ?? authUser?.displayName ?? "")}
-                width={56}
-                height={56}
-                className="size-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-medium text-muted-foreground">
-                {getInitials(userProfile?.displayName ?? authUser?.displayName ?? "?")}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <p className="text-base font-semibold">
-              {userProfile?.displayName ?? authUser?.displayName ?? "Tu nombre"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {userProfile?.bio ?? authUser?.bio ?? "Tu biografía"}
-            </p>
-            {primaryLinks.length > 0 && (
-              <div className="mt-1 flex items-center gap-2">
-                {primaryLinks.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={link.title}
-                    className="flex size-7 items-center justify-center rounded-full bg-muted transition-opacity hover:opacity-70"
-                  >
-                    {link.icon ? (
-                      <Image
-                        src={iconUrl(link.icon)}
-                        alt={link.title}
-                        width={14}
-                        height={14}
-                        className="size-3.5 object-contain"
-                        unoptimized
-                      />
-                    ) : (
-                      <span className="text-[9px] font-bold text-muted-foreground">
-                        {link.title.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {isLimitReached ? (
-          <Button
-            disabled
-            className="h-12 gap-2 rounded-full text-base"
-            title="Límite alcanzado"
+  const preview = (
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground">Vista previa</p>
+        {userProfile && (
+          <a
+            href={`/u/${userProfile.username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-11 items-center gap-1.5 text-xs font-medium text-primary hover:underline"
           >
-            <Plus className="size-5" />
-            Agregar link
-          </Button>
-        ) : (
-          <Button
-            onClick={handleAdd}
-            className="h-12 gap-2 rounded-full text-base cursor-pointer"
-          >
-            <Plus className="size-5" />
-            Agregar link
-          </Button>
+            Abrir perfil
+            <ExternalLink className="size-3.5" />
+          </a>
         )}
+      </div>
+      <div className="h-[min(680px,calc(100dvh-12rem))] rounded-[2.25rem] border border-border bg-muted/40 p-1.5">
+        <div className="scroll-thin h-full overflow-y-auto overscroll-contain rounded-[1.875rem] bg-background">
+          {previewProfile ? (
+            <PublicProfileCard
+              profile={previewProfile}
+              projects={previewProfile.projects}
+              githubStats={null}
+              hideShare
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Completa tu perfil para ver la vista previa
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 
-        <LinkList />
+  return (
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="flex flex-1 items-start gap-8"
+      >
+        <section className="flex min-w-0 flex-1 flex-col gap-5">
+          <header className="flex flex-col gap-1">
+            <h1 className="text-lg font-semibold leading-none">Links</h1>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {links.length} de {MAX_LINKS} · arrastra para reordenar
+            </p>
+          </header>
+
+          <Button
+            onClick={() => setFormOpen(true)}
+            disabled={isLimitReached}
+            title={isLimitReached ? "Límite alcanzado" : undefined}
+            className="h-12 w-full cursor-pointer gap-2 text-sm font-semibold"
+          >
+            <Plus className="size-4" />
+            Agregar link
+          </Button>
+
+          <LinkList onAdd={() => setFormOpen(true)} />
+        </section>
+
+        <aside className="sticky top-0 hidden w-[340px] shrink-0 flex-col gap-3 lg:flex">
+          {preview}
+        </aside>
+
+        <Button
+          onClick={() => setPreviewOpen(true)}
+          className="fixed bottom-5 right-5 z-40 h-12 cursor-pointer gap-2 rounded-full px-5 shadow-lg lg:hidden"
+        >
+          <Eye className="size-4" />
+          Vista previa
+        </Button>
+
+        <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
+          <SheetContent className="gap-3 overflow-y-auto p-4">
+            <SheetHeader>
+              <SheetTitle className="font-mono">Vista previa</SheetTitle>
+            </SheetHeader>
+            {preview}
+          </SheetContent>
+        </Sheet>
 
         <LinkFormModal
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
+          open={formOpen}
+          onOpenChange={setFormOpen}
           editingLink={null}
         />
-      </div>
-
-      <div className="hidden w-[380px] shrink-0 flex-col gap-4 lg:flex">
-        <div className="sticky top-0 flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Vista previa
-          </p>
-          <div className="max-h-[calc(100vh-8rem)] overflow-y-auto scroll-thin rounded-3xl p-4">
-            {previewProfile ? (
-              <PublicProfileCard
-                profile={previewProfile}
-                projects={previewProfile.projects}
-                githubStats={null}
-                hideShare
-              />
-            ) : (
-              <div className="flex h-[400px] items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30">
-                <p className="text-sm text-muted-foreground">
-                  Carga tu perfil para ver la preview
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </MotionConfig>
   );
 }
