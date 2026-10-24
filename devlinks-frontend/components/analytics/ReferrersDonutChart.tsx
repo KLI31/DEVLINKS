@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useReducedMotion } from "motion/react";
+import { Panel } from "@/components/dashboard/Panel";
 import type { ReferrerStat } from "@/types/analytics";
 
 interface ReferrersDonutChartProps {
@@ -49,18 +50,18 @@ export function ReferrersDonutChart({
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
-        <h3 className="text-sm font-medium">Referrers</h3>
+      <Panel>
+        <h3 className="text-sm font-medium text-foreground">Referrers</h3>
         <div className="flex h-[300px] items-center justify-center">
           <p className="text-sm text-muted-foreground">Sin referrers registrados</p>
         </div>
-      </div>
+      </Panel>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
-      <h3 className="text-sm font-medium">Referrers</h3>
+    <Panel>
+      <h3 className="text-sm font-medium text-foreground">Referrers</h3>
       <div className="relative mt-4">
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
@@ -100,6 +101,6 @@ export function ReferrersDonutChart({
           </div>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }

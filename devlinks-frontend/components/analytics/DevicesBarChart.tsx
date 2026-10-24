@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useReducedMotion } from "motion/react";
+import { Panel } from "@/components/dashboard/Panel";
 import type { DeviceStat } from "@/types/analytics";
 
 interface DevicesBarChartProps {
@@ -21,20 +22,20 @@ export function DevicesBarChart({ data, accentColor }: DevicesBarChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex w-full flex-col rounded-xl border border-border/70 bg-card p-5 shadow-(--shadow-card)">
-        <h3 className="font-medium">Dispositivos</h3>
+      <Panel className="flex w-full flex-col">
+        <h3 className="text-sm font-medium text-foreground">Dispositivos</h3>
         <div className="flex flex-1 items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">Sin datos de dispositivos</p>
         </div>
-      </div>
+      </Panel>
     );
   }
 
   const sortedData = [...data].sort((a, b) => b.count - a.count);
 
   return (
-    <div className="flex w-full flex-col rounded-xl border border-border/70 bg-card p-5 shadow-(--shadow-card)">
-      <h3 className="font-medium">Dispositivos</h3>
+    <Panel className="flex w-full flex-col">
+      <h3 className="text-sm font-medium text-foreground">Dispositivos</h3>
       <div className="mt-4 flex-1">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart
@@ -72,7 +73,7 @@ export function DevicesBarChart({ data, accentColor }: DevicesBarChartProps) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Panel>
   );
 }
 

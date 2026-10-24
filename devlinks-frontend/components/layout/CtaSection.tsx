@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useThemeTokens } from "@/hooks/useThemeTokens";
 import { cn } from "@/lib/utils";
 
-function CtaBackground() {
+export function CtaBackground() {
   const tokens = useThemeTokens();
   if (!tokens) return null;
 

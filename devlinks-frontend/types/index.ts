@@ -105,6 +105,9 @@ export interface LinkItem {
   displayOrder: number;
   isActive: boolean;
   layout: "classic" | "featured";
+  clicksCount: number;
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,6 +119,8 @@ export interface CreateLinkPayload {
   previewImage?: string;
   isPrimary?: boolean;
   layout?: "classic" | "featured";
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
 }
 
 export interface UpdateLinkPayload {
@@ -126,6 +131,8 @@ export interface UpdateLinkPayload {
   isPrimary?: boolean;
   isActive?: boolean;
   layout?: "classic" | "featured";
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
 }
 
 export interface PublicProject {

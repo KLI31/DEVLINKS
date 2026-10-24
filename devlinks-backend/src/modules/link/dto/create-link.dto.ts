@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsBoolean,
   IsIn,
+  IsDateString,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -38,4 +39,12 @@ export class CreateLinkDto {
   @IsOptional()
   @IsIn(['classic', 'featured'])
   layout?: 'classic' | 'featured';
+
+  @IsOptional()
+  @IsDateString()
+  scheduledStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  scheduledEnd?: string;
 }

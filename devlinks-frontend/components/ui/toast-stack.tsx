@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { useNotificationStore, type ToastNotification } from "@/store/notification-store";
 import { cn } from "@/lib/utils";
@@ -9,27 +9,27 @@ import { cn } from "@/lib/utils";
 const VARIANT_CONFIG = {
   success: {
     icon: CheckCircle2,
-    bar: "bg-emerald-500",
-    iconClass: "text-emerald-500",
-    border: "border-emerald-500/20",
+    accent: "bg-emerald-500",
+    chip: "bg-emerald-500 text-white",
+    border: "border-emerald-500/50",
   },
   error: {
     icon: XCircle,
-    bar: "bg-destructive",
-    iconClass: "text-destructive",
-    border: "border-destructive/20",
+    accent: "bg-red-500",
+    chip: "bg-red-500 text-white",
+    border: "border-red-500/50",
   },
   warning: {
     icon: AlertTriangle,
-    bar: "bg-amber-500",
-    iconClass: "text-amber-500",
-    border: "border-amber-500/20",
+    accent: "bg-amber-500",
+    chip: "bg-amber-500 text-white",
+    border: "border-amber-500/50",
   },
   info: {
     icon: Info,
-    bar: "bg-blue-500",
-    iconClass: "text-blue-500",
-    border: "border-blue-500/20",
+    accent: "bg-sky-500",
+    chip: "bg-sky-500 text-white",
+    border: "border-sky-500/50",
   },
 } as const;
 
@@ -50,24 +50,32 @@ function ToastItem({ toast }: { toast: ToastNotification }) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: 40, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 40, scale: 0.92 }}
-      transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      role={toast.variant === "error" ? "alert" : "status"}
+      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 48, scale: 0.96 }}
+      transition={{ type: "spring", stiffness: 420, damping: 32 }}
       className={cn(
-        "relative flex w-80 items-start gap-3 overflow-hidden rounded-xl border p-4 shadow-lg backdrop-blur-sm",
-        "bg-card/95",
+        "relative flex w-full items-start gap-3.5 overflow-hidden rounded-xl border bg-white py-4 pl-4 pr-3 text-slate-900",
+        "shadow-2xl shadow-black/40 sm:w-[26rem]",
         cfg.border,
       )}
     >
-      <Icon className={cn("mt-0.5 size-4 shrink-0", cfg.iconClass)} />
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full",
+          cfg.chip,
+        )}
+      >
+        <Icon className="size-5" />
+      </span>
 
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium leading-snug text-foreground">
+      <div className="min-w-0 flex-1 pt-0.5">
+        <p className="text-[15px] font-semibold leading-snug text-slate-900">
           {toast.title}
         </p>
         {toast.message && (
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
             {toast.message}
           </p>
         )}
@@ -76,14 +84,14 @@ function ToastItem({ toast }: { toast: ToastNotification }) {
       <button
         type="button"
         onClick={() => remove(toast.id)}
-        className="mt-0.5 shrink-0 cursor-pointer rounded-md p-0.5 text-muted-foreground/50 transition-colors hover:text-foreground"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:size-6"
         aria-label="Cerrar notificación"
       >
-        <X className="size-3.5" />
+        <X className="size-4 sm:size-3.5" />
       </button>
 
       <motion.div
-        className={cn("absolute bottom-0 left-0 h-[2px] origin-left", cfg.bar, "opacity-30")}
+        className={cn("absolute bottom-0 left-0 h-1 w-full origin-left", cfg.accent)}
         initial={{ scaleX: 1 }}
         animate={{ scaleX: 0 }}
         transition={{ duration: duration / 1000, ease: "linear" }}
@@ -100,15 +108,17 @@ export function ToastStack() {
     <div
       aria-live="polite"
       aria-label="Notificaciones"
-      className="pointer-events-none fixed right-4 top-4 z-[9999] flex flex-col gap-2"
+      className="pointer-events-none fixed inset-x-4 bottom-4 z-[9999] flex flex-col items-end gap-3 sm:inset-x-auto sm:right-6 sm:bottom-6"
     >
-      <AnimatePresence mode="popLayout" initial={false}>
-        {toasts.map((t) => (
-          <div key={t.id} className="pointer-events-auto">
-            <ToastItem toast={t} />
-          </div>
-        ))}
-      </AnimatePresence>
+      <MotionConfig reducedMotion="user">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {toasts.map((t) => (
+            <div key={t.id} className="pointer-events-auto w-full sm:w-auto">
+              <ToastItem toast={t} />
+            </div>
+          ))}
+        </AnimatePresence>
+      </MotionConfig>
     </div>
   );
 }

@@ -10,6 +10,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useReducedMotion } from "motion/react";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { Panel } from "@/components/dashboard/Panel";
+import { cn } from "@/lib/utils";
 import type { ClicksTimelinePoint } from "@/types/analytics";
 
 interface ClicksAreaChartProps {
@@ -17,33 +20,63 @@ interface ClicksAreaChartProps {
   accentColor: string;
 }
 
+const sum = (points: ClicksTimelinePoint[]) =>
+  points.reduce((acc, p) => acc + p.count, 0);
+
 export function ClicksAreaChart({ data, accentColor }: ClicksAreaChartProps) {
   const isReducedMotion = useReducedMotion();
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
-        <h3 className="text-sm font-medium">Clics en el tiempo</h3>
+      <Panel>
+        <h3 className="text-sm font-medium text-foreground">Clics en el tiempo</h3>
         <div className="flex h-[300px] items-center justify-center">
           <p className="text-sm text-muted-foreground">Sin clics en este período</p>
         </div>
-      </div>
+      </Panel>
     );
   }
 
+  // Sin periodo previo en la API: se compara la segunda mitad del rango contra la primera.
+  const half = Math.floor(data.length / 2);
+  const previous = sum(data.slice(0, half));
+  const current = sum(data.slice(half));
+  const delta = previous > 0 ? Math.round(((current - previous) / previous) * 100) : null;
+
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
-      <h3 className="text-sm font-medium">Clics en el tiempo</h3>
+    <Panel>
+      <h3 className="text-sm font-medium text-foreground">Clics en el tiempo</h3>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-mono text-4xl font-bold leading-none tabular-nums text-foreground">
+          {sum(data).toLocaleString("es-ES")}
+        </span>
+        {delta !== null && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium",
+              delta >= 0
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 text-destructive",
+            )}
+          >
+            {Math.abs(delta)}%
+            {delta >= 0 ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
+          </span>
+        )}
+        {delta !== null && (
+          <span className="text-xs text-muted-foreground">vs. periodo anterior</span>
+        )}
+      </div>
       <div className="mt-4">
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="clicksGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={accentColor} stopOpacity={0.3} />
+                <stop offset="5%" stopColor={accentColor} stopOpacity={0.15} />
                 <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
@@ -51,17 +84,24 @@ export function ClicksAreaChart({ data, accentColor }: ClicksAreaChartProps) {
                 const date = new Date(value as string);
                 return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
               }}
-              stroke="var(--border)"
+              axisLine={false}
+              tickLine={false}
+              tickMargin={8}
+              minTickGap={24}
             />
             <YAxis
               tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-              stroke="var(--border)"
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+              width={32}
             />
             <Tooltip
+              cursor={{ stroke: accentColor, strokeDasharray: "4 4" }}
               contentStyle={{
                 backgroundColor: "var(--card)",
                 border: "1px solid var(--border)",
-                borderRadius: "0.5rem",
+                borderRadius: "0.75rem",
                 fontSize: "0.875rem",
               }}
               labelStyle={{ color: "var(--foreground)" }}
@@ -81,12 +121,14 @@ export function ClicksAreaChart({ data, accentColor }: ClicksAreaChartProps) {
               dataKey="count"
               stroke={accentColor}
               fill="url(#clicksGrad)"
-              strokeWidth={2}
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5, stroke: "var(--card)", strokeWidth: 2 }}
               isAnimationActive={!isReducedMotion}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Panel>
   );
 }

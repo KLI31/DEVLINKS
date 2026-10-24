@@ -59,7 +59,6 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
               <motion.button
                 key={platform.slug}
                 type="button"
-                layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
@@ -77,7 +76,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     src={iconUrl(platform.slug)}
                     alt={platform.label}
                     width={20}
-                  height={20}
+                    height={20}
                     className="size-5 object-contain"
                     unoptimized
                   />
@@ -87,7 +86,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     </span>
                   )}
                 </div>
-                <span className="max-w-full truncate text-[9px] leading-tight text-muted-foreground">
+                <span className="max-w-full truncate text-[10px] leading-tight text-muted-foreground">
                   {platform.label}
                 </span>
               </motion.button>

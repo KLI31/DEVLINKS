@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import { Panel } from "@/components/dashboard/Panel";
 import type { ClicksTimelinePoint, ReferrerStat, CountryStat } from "@/types/analytics";
 
 const ClicksAreaChart = dynamic(
@@ -30,12 +31,10 @@ const ClicksWorldMap = dynamic(
 
 function ChartSkeleton({ className }: { className?: string }) {
   return (
-    <div
-      className={`rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)] ${className ?? ""}`}
-    >
+    <Panel className={className}>
       <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
       <div className="mt-4 h-[300px] animate-pulse rounded-lg bg-muted" />
-    </div>
+    </Panel>
   );
 }
 
@@ -57,12 +56,12 @@ export function AnalyticsCharts({
   return (
     <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <Suspense fallback={<ChartSkeleton />}>
             <ClicksAreaChart data={timeline} accentColor={accentColor} />
           </Suspense>
         </div>
-        <div>
+        <div className="min-w-0">
           <Suspense fallback={<ChartSkeleton />}>
             <ReferrersDonutChart
               data={referrers}

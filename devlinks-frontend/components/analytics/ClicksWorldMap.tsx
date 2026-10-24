@@ -6,6 +6,7 @@ import {
   MarkerContent,
   MarkerTooltip,
 } from "@/components/ui/map";
+import { Panel } from "@/components/dashboard/Panel";
 import type { CountryStat } from "@/types/analytics";
 
 interface ClicksWorldMapProps {
@@ -29,18 +30,16 @@ export function ClicksWorldMap({
 }: ClicksWorldMapProps) {
   if (countries.length === 0) {
     return (
-      <div className="relative h-[380px] overflow-hidden rounded-xl border border-border/70 bg-card shadow-[var(--shadow-card)]">
-        <div className="flex h-full items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            Sin datos geográficos disponibles
-          </p>
-        </div>
-      </div>
+      <Panel className="flex h-[380px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          Sin datos geográficos disponibles
+        </p>
+      </Panel>
     );
   }
 
   return (
-    <div className="h-[380px] overflow-hidden rounded-xl border border-border/70 bg-card shadow-[var(--shadow-card)]">
+    <Panel className="h-[380px] overflow-hidden p-0">
       <Map center={[0, 20]} zoom={1.5}>
         {countries.map((country) => {
           const size = markerSize(country.count);
@@ -75,6 +74,6 @@ export function ClicksWorldMap({
           );
         })}
       </Map>
-    </div>
+    </Panel>
   );
 }

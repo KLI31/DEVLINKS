@@ -12,6 +12,7 @@ export const LINK_MESSAGES = {
   FORBIDDEN: 'No tienes permiso para modificar este link',
   DELETED: 'Link eliminado correctamente',
   REORDERED: 'Links reordenados correctamente',
+  INVALID_SCHEDULE: 'La fecha de fin debe ser posterior a la de inicio',
 } as const;
 
 export const AUTH_MESSAGES = {

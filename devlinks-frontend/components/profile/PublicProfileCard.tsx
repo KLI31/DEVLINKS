@@ -1,21 +1,24 @@
 "use client";
 
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+} from "motion/react";
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import {
   MapPin,
   Star,
-  ChevronRight,
-  ExternalLink,
+  ArrowUpRight,
+  Link2,
   Code2,
   Users,
-  UserCheck,
+  AtSign,
   Share2,
-  Copy,
-  Check,
 } from "lucide-react";
-import { useNotifications } from "@/hooks/use-notifications";
+import { getDevIconUrl } from "@/lib/api/github.api";
 import { cn } from "@/lib/utils";
 import type {
   PublicProfile,
@@ -23,11 +26,28 @@ import type {
   PlacedSticker,
   GithubStats,
 } from "@/types";
-import { iconUrl } from "@/lib/icons";
-
-import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
-import { getProfileUrl } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { iconFromUrl, iconUrl } from "@/lib/icons";
+import {
+  StickerTile,
+  STICKER_BASE_SIZE,
+  clampSticker,
+  stickerColor,
+} from "@/components/profile/StickerTile";
+import { getProfileUrl, perceivedLuminance } from "@/lib/utils";
+import { ShareProfileDialog } from "@/components/profile/ShareProfileDialog";
+import {
+  HeatmapCells,
+  HeatmapChart,
+  HeatmapInteractionBoundary,
+  HeatmapInteractionProvider,
+  HeatmapLegend,
+  HeatmapSeparator,
+  HeatmapTooltip,
+  HeatmapXAxis,
+  HeatmapYAxis,
+  type HeatmapColumn,
+  type HeatmapLevelStyles,
+} from "@/components/charts/heatmap";
 
 const BUTTON_SHADOW_CSS: Record<string, string> = {
   none: "none",
@@ -63,25 +83,40 @@ const LANG_COLOR: Record<string, string> = {
   Kotlin: "#A97BFF",
 };
 
-const HEATMAP_ALPHA = ["0d", "2a", "55", "88", "cc"] as const;
+const HEATMAP_MIX = [0, 42, 62, 82, 100] as const;
+const HEATMAP_WEEKS = 26;
+const HEATMAP_MARGIN = { top: 18, right: 0, bottom: 0, left: 20 };
+const GITHUB_LINK_ID = "github-profile";
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
-const PROJECT_TITLE_COLORS = [
-  "#60a5fa", // blue-400
-  "#34d399", // emerald-400
-  "#a78bfa", // violet-400
-  "#f472b6", // pink-400
-  "#fb923c", // orange-400
-  "#22d3ee", // cyan-400
-  "#4ade80", // green-400
-  "#e879f9", // fuchsia-400
-] as const;
+const RELATIVE_TIME = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 
-function perceivedLuminance(hex: string): number {
-  const clean = hex.replace("#", "").padEnd(6, "0");
-  const r = parseInt(clean.slice(0, 2), 16) / 255;
-  const g = parseInt(clean.slice(2, 4), 16) / 255;
-  const b = parseInt(clean.slice(4, 6), 16) / 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b;
+function timeAgo(ts: number): string {
+  const mins = Math.round((ts - Date.now()) / 60_000);
+  if (Math.abs(mins) < 60) return RELATIVE_TIME.format(mins, "minute");
+  const hours = Math.round(mins / 60);
+  if (Math.abs(hours) < 24) return RELATIVE_TIME.format(hours, "hour");
+  return RELATIVE_TIME.format(Math.round(hours / 24), "day");
+}
+
+function parseDay(iso: string): Date {
+  return new Date(
+    Number(iso.slice(0, 4)),
+    Number(iso.slice(5, 7)) - 1,
+    Number(iso.slice(8, 10)),
+  );
+}
+
+function formatContributionLabel(n: number): string {
+  return `${n} ${n === 1 ? "contribución" : "contribuciones"}`;
+}
+
+function displayHost(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function formatCount(n: number): string {
@@ -95,6 +130,8 @@ interface PublicProfileCardProps {
   projects: Project[];
   githubStats?: GithubStats | null;
   hideShare?: boolean;
+  demo?: boolean;
+  wide?: boolean;
 }
 
 export function PublicProfileCard({
@@ -102,14 +139,18 @@ export function PublicProfileCard({
   projects,
   githubStats: initialStats,
   hideShare = false,
+  demo = false,
+  wide = false,
 }: PublicProfileCardProps) {
-  const { notifySuccess, notifyError } = useNotifications();
+  const w = (cls: string) => (wide ? cls : "");
   const reduceMotion = useReducedMotion();
   const coverRef = useRef<HTMLDivElement>(null);
 
   const [githubStats, setGithubStats] = useState<GithubStats | null>(
     initialStats ?? null,
   );
+
+  const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (initialStats !== undefined) return;
@@ -128,31 +169,15 @@ export function PublicProfileCard({
   const { scrollY } = useScroll();
   const coverOpacity = useTransform(scrollY, [0, 300], [1, 0]);
   const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
-  const coverBlurPx = useTransform(scrollY, [0, 300], [0, 10]);
-  const coverBlurFilter = useTransform(coverBlurPx, (v) => `blur(${v}px)`);
 
   const [shareOpen, setShareOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const publicUrl = getProfileUrl(profile.username);
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      notifySuccess("Link copiado al portapapeles");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      notifyError("Error al copiar el link");
-    }
-  };
-
-  const isHero = profile.layout === "hero";
-  const isGradient = profile.bgType === "gradient";
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
-  const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
-  const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
-  const textSecondary = isLight ? "rgba(0,0,0,0.58)" : "rgba(255,255,255,0.62)";
-  const dividerColor = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
+  const textPrimary = isLight ? "rgba(0,0,0,0.92)" : "rgba(255,255,255,0.96)";
+  const textMuted = isLight ? "rgba(0,0,0,0.74)" : "rgba(255,255,255,0.74)";
+  const textSecondary = isLight ? "rgba(0,0,0,0.84)" : "rgba(255,255,255,0.86)";
+  const dividerColor = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)";
 
   const fontFamily = FONT_CSS[profile.fontFamily] ?? FONT_CSS["jetbrains-mono"];
   const titleFontFamily = profile.altTitleFont
@@ -166,7 +191,18 @@ export function PublicProfileCard({
   const isOutline = bVariant === "outline";
   const isGlass = bVariant === "glass";
   const bColor = profile.buttonColor ?? profile.accentColor;
-  const bTextColor = profile.buttonTextColor ?? textPrimary;
+  const isSolid = !isOutline && !isGlass;
+  const linkText = isSolid
+    ? (profile.buttonTextColor ??
+      (perceivedLuminance(bColor) > 0.5 ? "#0a0a0a" : "#ffffff"))
+    : textPrimary;
+  const linkMuted = isSolid
+    ? `color-mix(in srgb, ${linkText} 68%, transparent)`
+    : textSecondary;
+  const linkIconColor = isSolid ? linkText : profile.accentColor;
+  const radiusPx = profile.buttonRadius ?? 8;
+  const iconTileRadius =
+    radiusPx >= 9999 ? "9999px" : `${Math.max(radiusPx - 8, 6)}px`;
   const bShadow = BUTTON_SHADOW_CSS[profile.buttonShadow ?? "none"] ?? "none";
 
   const cardBg =
@@ -181,13 +217,9 @@ export function PublicProfileCard({
         backgroundSize: "cover",
         backgroundPosition: "center",
       }
-    : profile.bgType === "gradient"
-      ? {
-          background: `linear-gradient(135deg, color-mix(in srgb, ${profile.bgColor} 90%, #000 50%) 0%, ${profile.accentColor}45 100%)`,
-        }
-      : {
-          background: `linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 60%, #000 40%) 0%, ${profile.accentColor}20 100%)`,
-        };
+    : {
+        background: `radial-gradient(120% 80% at 20% 0%, ${profile.accentColor}90 0%, transparent 60%), radial-gradient(90% 70% at 90% 30%, color-mix(in srgb, ${profile.accentColor} 45%, #000) 0%, transparent 65%), linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 70%, ${profile.accentColor}) 0%, ${profile.bgColor} 100%)`,
+      };
 
   const linkStyle = isOutline
     ? {
@@ -204,15 +236,10 @@ export function PublicProfileCard({
           boxShadow: bShadow,
         }
       : {
-          border: `1px solid ${bColor}28`,
-          background: `${bColor}0d`,
+          border: "1px solid transparent",
+          background: bColor,
           boxShadow: bShadow,
         };
-
-  const repoStyle = {
-    border: `1px solid ${profile.accentColor}20`,
-    background: `${profile.accentColor}08`,
-  };
 
   const stickers: PlacedSticker[] = Array.isArray(profile.stickers)
     ? profile.stickers
@@ -233,159 +260,185 @@ export function PublicProfileCard({
           label: "Repositorios",
           value: formatCount(githubStats.totalRepos),
           Icon: Code2,
-          iconColor: "#22d3ee",
+          iconColor: isLight ? "#0e7490" : "#22d3ee",
         },
         {
           label: "Seguidores",
           value: formatCount(githubStats.followers),
           Icon: Users,
-          iconColor: "#4ade80",
+          iconColor: isLight ? "#15803d" : "#4ade80",
         },
         {
-          label: "Siguiendo",
-          value: formatCount(githubStats.user.following),
-          Icon: UserCheck,
-          iconColor: "#60a5fa",
-        },
-        {
-          label: "Stars recibidas",
+          label: "Stars",
           value: formatCount(totalStars),
           Icon: Star,
-          iconColor: "#facc15",
+          iconColor: isLight ? "#a16207" : "#facc15",
         },
       ]
     : [];
 
-  const DISPLAY_WEEKS = 28;
+  const stackLanguages = (githubStats?.topLanguages ?? [])
+    .map((l) => ({ ...l, icon: getDevIconUrl(l.language) }))
+    .filter((l) => l.icon)
+    .slice(0, 4);
+
   const contributions = githubStats?.contributions ?? [];
-  const recentDays = contributions.slice(-(DISPLAY_WEEKS * 7));
-  const firstDow =
-    recentDays.length > 0 ? (new Date(recentDays[0].date).getDay() + 6) % 7 : 0;
-  const paddedDays = [...Array(firstDow).fill(null), ...recentDays];
-  const heatmapWeeks: ((typeof recentDays)[0] | null)[][] = [];
-  for (let i = 0; i < paddedDays.length; i += 7) {
-    heatmapWeeks.push(paddedDays.slice(i, i + 7));
-  }
+  const recentDays = contributions.slice(-(HEATMAP_WEEKS * 7));
+  const firstDay = recentDays.length > 0 ? parseDay(recentDays[0].date) : null;
+  const gridStart = firstDay
+    ? new Date(
+        firstDay.getFullYear(),
+        firstDay.getMonth(),
+        firstDay.getDate() - firstDay.getDay(),
+      )
+    : null;
+  const leadingBlanks = firstDay?.getDay() ?? 0;
+  const dayCounts = new Map(
+    recentDays.map((d) => [parseDay(d.date).getTime(), d.count]),
+  );
+  const heatmapColumns: HeatmapColumn[] = gridStart
+    ? Array.from(
+        { length: Math.ceil((leadingBlanks + recentDays.length) / 7) },
+        (_, w) => ({
+          bin: w,
+          bins: Array.from({ length: 7 }, (_, d) => ({
+            bin: d,
+            count: recentDays[w * 7 + d - leadingBlanks]?.level ?? 0,
+            date: new Date(
+              gridStart.getFullYear(),
+              gridStart.getMonth(),
+              gridStart.getDate() + w * 7 + d,
+            ),
+          })),
+        }),
+      )
+    : [];
+  const periodContributions = recentDays.reduce((s, d) => s + d.count, 0);
+  const heatLevelStyles = HEATMAP_MIX.map((mix, level) => ({
+    color:
+      level === 0
+        ? isLight
+          ? "rgba(0,0,0,0.08)"
+          : "rgba(255,255,255,0.09)"
+        : `color-mix(in srgb, ${profile.accentColor} ${mix}%, ${isLight ? "#fff" : profile.bgColor})`,
+  })) as unknown as HeatmapLevelStyles;
+
+  const githubUrl =
+    profile.githubUsername && !demo
+      ? `https://github.com/${profile.githubUsername}`
+      : null;
+  const hasGithubLink = primaryLinks.some(
+    (l) => l.url.replace(/\/$/, "").toLowerCase() === githubUrl?.toLowerCase(),
+  );
+  const iconLinks: {
+    id: string;
+    url: string;
+    title: string;
+    icon?: string | null;
+  }[] =
+    githubUrl && !hasGithubLink
+      ? [
+          {
+            id: GITHUB_LINK_ID,
+            url: githubUrl,
+            title: "GitHub",
+            icon: "github",
+          },
+          ...primaryLinks,
+        ]
+      : primaryLinks;
+  const surfaceSubtle = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.06)";
+  const hasLeftCol = heatmapColumns.length > 0 || hasProjects;
+  const splitBody = hasLeftCol && secondaryLinks.length > 0;
+  const fullCol = splitBody ? "" : w("lg:col-span-2");
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[480px] rounded-[30px] isolate"
+      className={cn(
+        "relative mx-auto w-full max-w-[480px] rounded-[28px] isolate",
+        w("lg:max-w-[1040px]"),
+      )}
       style={{
         fontFamily,
-        boxShadow:
-          "0 12px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.03)",
-        background: isGradient ? cardBg : undefined,
+        background: wide ? "transparent" : cardBg,
+        border: "1px solid transparent",
+        boxShadow: wide
+          ? "none"
+          : `0 0 0 1px ${isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"}, 0 2px 4px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.28)`,
       }}
     >
       {!hideShare && (
         <button
           type="button"
           onClick={() => setShareOpen(true)}
-          className="absolute top-4 right-4 z-30 flex size-10 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95"
-          style={{
-            background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.10)",
-            color: textPrimary,
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-          }}
+          className="absolute top-3 right-3 z-30 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 text-black/80 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.16)] transition-[scale,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [-webkit-tap-highlight-color:transparent] hover:bg-white active:scale-[0.96]"
           aria-label="Compartir perfil"
         >
-          <Share2 className="size-5" />
+          <Share2 className="size-[18px]" strokeWidth={2} />
         </button>
       )}
 
-      {isHero && (
+      <div className={cn("relative", w("lg:min-h-[460px]"))}>
         <div
           ref={coverRef}
-          className="relative w-full overflow-hidden rounded-t-[30px]"
-          style={{ height: 400 }}
-        >
-          {!isGradient && (
-            <div className="absolute inset-0" style={{ background: cardBg }} />
+          className={cn(
+            "relative h-[300px] w-full overflow-hidden rounded-t-[27px]",
+            w(
+              "lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[64%] lg:rounded-t-none lg:rounded-tr-[27px]",
+            ),
           )}
-
+        >
           <motion.div
-            className="absolute inset-0"
+            className={cn(
+              "absolute inset-0 [mask-image:linear-gradient(to_bottom,#000_55%,transparent_100%)]",
+              w(
+                "lg:[mask-composite:intersect] lg:[mask-image:linear-gradient(to_right,transparent_0%,#000_55%),linear-gradient(to_bottom,#000_70%,transparent_100%)]",
+              ),
+            )}
             style={{
               ...coverBg,
-              opacity: coverOpacity,
-              scale: coverScale,
-              filter: coverBlurFilter,
-              ...(isGradient && {
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
-                maskImage:
-                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
-              }),
+              ...(!reduceMotion &&
+                !demo && { opacity: coverOpacity, scale: coverScale }),
             }}
           />
-
-          {!isGradient && (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to bottom,
-                  transparent 0%,
-                  transparent 45%,
-                  ${profile.bgColor}14 55%,
-                  ${profile.bgColor}47 65%,
-                  ${profile.bgColor}8C 75%,
-                  ${profile.bgColor}D1 85%,
-                  ${profile.bgColor}F2 92%,
-                  ${profile.bgColor} 100%
-                )`,
-              }}
-            />
-          )}
-
-          {!isGradient && (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to right, ${profile.bgColor}4d 0%, transparent 22%, transparent 78%, ${profile.bgColor}4d 100%)`,
-              }}
-            />
-          )}
         </div>
-      )}
 
-      <div
-        className={
-          isHero
-            ? "px-6 pb-8 pt-0 rounded-b-[30px]"
-            : "px-6 pb-8 pt-0 rounded-[30px]"
-        }
-        style={{ background: isGradient ? "transparent" : cardBg }}
-      >
         <div
-          className="relative z-10 flex flex-col items-center pb-5 pt-0"
-          style={{
-            marginTop: isHero ? "-36px" : "0",
-            paddingTop: isHero ? "0" : "32px",
-          }}
+          className={cn(
+            "relative z-10 px-6",
+            w("lg:max-w-[52%] lg:px-12 lg:py-14"),
+          )}
         >
           <div
-            className="size-[72px] overflow-hidden rounded-full"
+            className={cn(
+              "animate-card-rise relative size-[88px] overflow-hidden rounded-full -mt-32",
+              w("lg:mt-0"),
+            )}
             style={{
               background: profile.avatarUrl
-                ? "transparent"
-                : `${profile.accentColor}25`,
-              boxShadow: `0 0 0 2px ${profile.bgColor}, 0 0 0 4px ${profile.accentColor}80, 0 6px 28px ${profile.accentColor}55, 0 2px 8px rgba(0,0,0,0.25)`,
+                ? profile.bgColor
+                : `color-mix(in srgb, ${profile.accentColor} 25%, ${profile.bgColor})`,
+              boxShadow: demo
+                ? "0 12px 32px rgba(0,0,0,0.32)"
+                : `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}99, 0 12px 32px rgba(0,0,0,0.32)`,
             }}
           >
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
                 alt={profile.displayName}
-                width={72}
-                height={72}
-                className="size-full object-cover"
+                width={88}
+                height={88}
+                className={cn(
+                  "size-full rounded-full object-cover outline-1 -outline-offset-1",
+                  isLight ? "outline-black/10" : "outline-white/10",
+                )}
                 priority
               />
             ) : (
               <div className="flex size-full items-center justify-center">
                 <span
-                  className="text-base font-bold"
+                  className="text-xl font-bold"
                   style={{ color: textPrimary }}
                 >
                   {profile.displayName.slice(0, 2).toUpperCase()}
@@ -394,285 +447,372 @@ export function PublicProfileCard({
             )}
           </div>
 
-          <p
-            className="mt-2.5 text-[13px] font-semibold"
+          <h1
+            className={cn(
+              "animate-card-rise [--i:1] mt-3 text-[26px] font-bold leading-tight tracking-[-0.02em] text-balance",
+              w("lg:text-[34px]"),
+            )}
             style={{ color: textPrimary, fontFamily: titleFontFamily }}
           >
             {profile.displayName}
-          </p>
-          <p
-            className="mt-0.5 text-[11px]"
-            style={{ color: `${profile.accentColor}cc` }}
-          >
-            @{profile.username}
-          </p>
-
-          {profile.location && (
-            <div className="mt-1.5 flex items-center justify-center gap-1">
-              <MapPin
-                className="size-3 shrink-0"
-                style={{ color: textSecondary }}
-              />
-              <span className="text-[11px]" style={{ color: textSecondary }}>
-                {profile.location}
-              </span>
-            </div>
-          )}
+          </h1>
 
           {profile.bio && (
             <p
-              className="mt-2 max-w-xs text-center text-[12px] leading-relaxed"
-              style={{ color: textSecondary }}
+              className="animate-card-rise [--i:2] mt-1.5 text-[15px] leading-relaxed text-pretty"
+              style={{
+                color: textSecondary,
+                fontFamily:
+                  profile.bio.length > 40 ? FONT_CSS.inter : undefined,
+              }}
             >
               {profile.bio}
             </p>
           )}
 
-          {primaryLinks.length > 0 && (
-            <div className="mt-3 flex flex-wrap justify-center gap-3">
-              {primaryLinks.map((link) => (
+          <div className="animate-card-rise [--i:3] mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div
+              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[14px]"
+              style={{ color: textSecondary }}
+            >
+              <span className="flex items-center gap-1.5">
+                <AtSign className="size-4 shrink-0" strokeWidth={1.75} />
+                {profile.username}
+              </span>
+              {profile.location && (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <MapPin className="size-4 shrink-0" strokeWidth={1.75} />
+                  <span className="truncate">{profile.location}</span>
+                </span>
+              )}
+            </div>
+
+            {stackLanguages.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {stackLanguages.map((l) => (
+                    <Image
+                      key={l.language}
+                      src={l.icon!}
+                      alt={l.language}
+                      title={`${l.language} · ${l.pct}%`}
+                      width={22}
+                      height={22}
+                      unoptimized
+                      className="size-[22px] object-contain"
+                    />
+                  ))}
+                </div>
+                <span
+                  className="text-[14px] font-medium"
+                  style={{ color: textPrimary }}
+                >
+                  Stack
+                </span>
+              </div>
+            )}
+          </div>
+
+          {iconLinks.length > 0 && (
+            <div className="animate-card-rise [--i:4] mt-4 flex flex-wrap gap-2">
+              {iconLinks.map((link) => (
                 <a
                   key={link.id}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={link.title}
-                  onClick={() => trackClick(link.id)}
-                  className="flex size-10 shrink-0 items-center justify-center transition-all hover:opacity-80 hover:scale-110"
+                  aria-label={`${link.title} (abre en una pestaña nueva)`}
+                  onClick={
+                    link.id === GITHUB_LINK_ID
+                      ? undefined
+                      : () => trackClick(link.id)
+                  }
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full outline-none transition-[scale,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.96] motion-reduce:active:scale-100"
+                  style={
+                    {
+                      background: surfaceSubtle,
+                      "--row-ring": profile.accentColor,
+                    } as React.CSSProperties
+                  }
                 >
                   <Image
                     src={iconUrl(link.icon ?? "link", profile.accentColor)}
-                    alt={link.title}
-                    width={50}
-                    height={50}
+                    alt=""
+                    width={20}
+                    height={20}
                     unoptimized
-                    className="size-7 object-contain"
+                    className="size-5 object-contain"
                   />
                 </a>
               ))}
             </div>
           )}
-        </div>
 
-        {statsItems.length > 0 && (
-          <>
-            <div className="flex items-center justify-center">
+          {statsItems.length > 0 && (
+            <dl className="mt-5 flex items-stretch">
               {statsItems.map(({ label, value, Icon, iconColor }, i) => (
-                <div key={label} className="flex items-center">
-                  {i > 0 && (
+                <div
+                  key={label}
+                  className="animate-card-rise flex flex-col items-center gap-1.5 px-4 first:pl-0"
+                  style={
+                    {
+                      "--i": i,
+                      ...(i > 0 && {
+                        borderLeft: `1px solid ${dividerColor}`,
+                      }),
+                    } as React.CSSProperties
+                  }
+                >
+                  <dd className="flex items-center gap-1.5">
+                    <Icon
+                      aria-hidden="true"
+                      className="size-5"
+                      strokeWidth={2.25}
+                      style={{ color: iconColor }}
+                    />
                     <span
-                      className="mx-3 text-[10px]"
-                      style={{ color: textMuted }}
+                      className="text-[22px] font-semibold tabular-nums leading-none"
+                      style={{ color: textPrimary }}
                     >
-                      •
+                      {value}
                     </span>
-                  )}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="flex items-center gap-1">
-                      <Icon className="size-[14px]" style={{ color: iconColor }} />
-                      <span
-                        className="text-[15px] font-bold tabular-nums leading-none"
-                        style={{ color: textPrimary }}
-                      >
-                        {value}
-                      </span>
-                    </div>
-                    <span
-                      className="text-[9px] leading-tight"
-                      style={{ color: textMuted }}
-                    >
-                      {label}
-                    </span>
-                  </div>
+                  </dd>
+                  <dt
+                    className="text-[14px] leading-tight"
+                    style={{ color: textMuted }}
+                  >
+                    {label}
+                  </dt>
                 </div>
               ))}
-            </div>
-          </>
-        )}
+            </dl>
+          )}
+        </div>
+      </div>
 
-        {heatmapWeeks.length > 0 && (
-          <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <div className="mb-2.5 flex items-baseline justify-between">
-              <span
-                className="text-[9px] font-semibold uppercase tracking-widest"
-                style={{ color: textMuted }}
-              >
-                Contribuciones
-              </span>
-              {githubStats && (
-                <span
-                  className="text-[9px] tabular-nums"
+      <div
+        className={cn(
+          "relative z-10 px-6 pb-8",
+          w("lg:grid lg:grid-cols-2 lg:gap-x-12 lg:px-12 lg:pb-10"),
+        )}
+      >
+        {hasLeftCol && (
+          <div className={fullCol}>
+            {heatmapColumns.length > 0 && githubStats && (
+              <section aria-label="Actividad en GitHub">
+                <div
+                  className="my-5 h-px"
+                  style={{ background: dividerColor }}
+                />
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <h2
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                    style={{ color: textMuted }}
+                  >
+                    Actividad
+                  </h2>
+                  <span
+                    className="text-[11px] tabular-nums"
+                    style={{ color: textMuted }}
+                    suppressHydrationWarning
+                  >
+                    <span style={{ color: textPrimary }}>
+                      {formatCount(periodContributions)}
+                    </span>{" "}
+                    contribuciones · {timeAgo(githubStats.fetchedAt)}
+                  </span>
+                </div>
+
+                <div
+                  role="img"
+                  aria-label={`${periodContributions} contribuciones en los últimos ${HEATMAP_WEEKS * 7} días`}
+                  style={
+                    {
+                      "--chart-label": textMuted,
+                      "--chart-tooltip-background": isLight
+                        ? "#ffffff"
+                        : "#18181b",
+                      "--chart-tooltip-foreground": isLight
+                        ? "#0a0a0a"
+                        : "#fafafa",
+                      "--chart-tooltip-muted": isLight ? "#52525b" : "#a1a1aa",
+                    } as React.CSSProperties
+                  }
+                >
+                  <HeatmapInteractionProvider>
+                    <HeatmapInteractionBoundary>
+                      <HeatmapChart
+                        data={heatmapColumns}
+                        layout="fluid"
+                        gap={3}
+                        margin={HEATMAP_MARGIN}
+                        levelStyles={heatLevelStyles}
+                        animate={!reduceMotion}
+                      >
+                        <HeatmapSeparator
+                          groupBy="quarter"
+                          stroke={dividerColor}
+                        />
+                        <HeatmapCells cornerRadius={999} />
+                        <HeatmapXAxis className="capitalize" />
+                        <HeatmapYAxis labelFormat="initial" />
+                        <HeatmapTooltip
+                          formatLabel={(_, date) =>
+                            formatContributionLabel(
+                              dayCounts.get(date.getTime()) ?? 0,
+                            )
+                          }
+                        />
+                      </HeatmapChart>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span
+                          className="whitespace-nowrap text-[11px]"
+                          style={{ color: textMuted }}
+                        >
+                          {formatCount(githubStats.totalContributions)} en el
+                          último año
+                        </span>
+                        <HeatmapLegend
+                          cornerRadius={999}
+                          cellSize={10}
+                          gap={3}
+                          levelStyles={heatLevelStyles}
+                          lessLabel="Menos"
+                          moreLabel="Más"
+                          labelClassName="text-chart-label"
+                        />
+                      </div>
+                    </HeatmapInteractionBoundary>
+                  </HeatmapInteractionProvider>
+                </div>
+              </section>
+            )}
+
+            {hasProjects && (
+              <>
+                <div
+                  className="my-5 h-px"
+                  style={{ background: dividerColor }}
+                />
+                <h2
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ color: textMuted }}
                 >
-                  {formatCount(githubStats.totalContributions)} este año
-                </span>
-              )}
-            </div>
-            <div className="scroll-hide overflow-x-auto">
-              <div className="flex justify-center gap-[3px]">
-                {heatmapWeeks.map((week, wi) => (
-                  <div key={wi} className="flex flex-col gap-[3px]">
-                    {Array.from({ length: 7 }).map((_, di) => {
-                      const day = week[di] ?? null;
-                      const level = day?.level ?? -1;
-                      return (
-                        <div
-                          key={di}
-                          title={
-                            day
-                              ? `${day.date}: ${day.count} contributions`
-                              : undefined
-                          }
-                          style={{
-                            width: 11,
-                            height: 11,
-                            borderRadius: 3,
-                            background:
-                              level < 0
-                                ? `${profile.accentColor}0a`
-                                : `${profile.accentColor}${HEATMAP_ALPHA[Math.max(0, level)]}`,
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-end gap-1.5">
-              <span className="text-[8px]" style={{ color: textMuted }}>
-                Menos
-              </span>
-              {["0a", ...HEATMAP_ALPHA].map((alpha) => (
-                <div
-                  key={alpha}
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: 2,
-                    background: `${profile.accentColor}${alpha}`,
-                  }}
-                />
-              ))}
-              <span className="text-[8px]" style={{ color: textMuted }}>
-                Más
-              </span>
-            </div>
-          </>
-        )}
+                  Proyectos destacados
+                </h2>
+                <ul className="flex flex-col">
+                  {projects.map((project, i) => (
+                    <motion.li
+                      key={project.id}
+                      initial={
+                        reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.2,
+                        delay: i * 0.05,
+                        ease: EASE_OUT,
+                      }}
+                      style={
+                        i > 0
+                          ? { borderTop: `1px solid ${dividerColor}` }
+                          : undefined
+                      }
+                    >
+                      <a
+                        href={project.url ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-3 outline-none transition-[background-color,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[var(--row-hover)] focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.99] motion-reduce:active:scale-100"
+                        style={
+                          {
+                            "--row-hover": surfaceSubtle,
+                            "--row-ring": profile.accentColor,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate text-[13px] font-medium leading-tight"
+                            style={{ color: textPrimary }}
+                          >
+                            {project.title || project.githubRepo}
+                          </span>
+                          {project.description && (
+                            <span
+                              className="mt-1 block truncate text-[11px] leading-snug"
+                              style={{ color: textMuted }}
+                            >
+                              {project.description}
+                            </span>
+                          )}
+                        </span>
 
-        {hasProjects && (
-          <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <p
-              className="mb-2 text-[9px] font-semibold uppercase tracking-widest"
-              style={{ color: textMuted }}
-            >
-              Proyectos destacados
-            </p>
-            <div
-              className="grid gap-2"
-              style={{
-                gridTemplateColumns: `repeat(${Math.min(projects.length, 3)}, minmax(0, 1fr))`,
-              }}
-            >
-              {projects.map((project, i) => (
-                <motion.a
-                  key={project.id}
-                  href={project.url ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col justify-between rounded-lg p-3"
-                  style={repoStyle}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.2,
-                    delay: i * 0.05,
-                    ease: "easeOut",
-                  }}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-1 mb-1.5">
-                      <p
-                        className="text-[11px] font-bold leading-tight break-all line-clamp-2"
-                        style={{
-                          color:
-                            PROJECT_TITLE_COLORS[
-                              i % PROJECT_TITLE_COLORS.length
-                            ],
-                        }}
-                      >
-                        {project.title || project.githubRepo}
-                      </p>
-                      <ExternalLink
-                        className="size-3 shrink-0 mt-0.5"
-                        style={{ color: `${profile.accentColor}80` }}
-                      />
-                    </div>
-                    {project.description && (
-                      <p
-                        className="text-[10px] leading-relaxed line-clamp-2"
-                        style={{ color: textMuted }}
-                      >
-                        {project.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-2.5 flex items-center justify-between gap-1">
-                    {project.language ? (
-                      <span
-                        className="flex items-center gap-1 text-[9px]"
-                        style={{ color: textMuted }}
-                      >
-                        <span
-                          className="block size-1.5 rounded-full shrink-0"
-                          style={{
-                            background:
-                              LANG_COLOR[project.language] ??
-                              profile.accentColor,
-                          }}
+                        {project.language && (
+                          <span
+                            className="flex shrink-0 items-center gap-1.5 text-[11px]"
+                            style={{ color: textMuted }}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="block size-1.5 rounded-full"
+                              style={{
+                                background:
+                                  LANG_COLOR[project.language] ??
+                                  profile.accentColor,
+                              }}
+                            />
+                            {project.language}
+                          </span>
+                        )}
+                        {project.stars > 0 && (
+                          <span
+                            className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums"
+                            style={{ color: textMuted }}
+                          >
+                            <Star
+                              aria-hidden="true"
+                              className="size-3 fill-current"
+                            />
+                            <span className="sr-only">Stars:</span>
+                            {project.stars >= 1000
+                              ? `${(project.stars / 1000).toFixed(1)}k`
+                              : project.stars}
+                          </span>
+                        )}
+                        <ArrowUpRight
+                          aria-hidden="true"
+                          className="size-4 shrink-0 opacity-30 transition-[opacity,translate] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                          style={{ color: textPrimary }}
                         />
-                        {project.language}
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-                    {project.stars > 0 && (
-                      <span
-                        className="flex items-center gap-0.5 text-[9px] shrink-0"
-                        style={{ color: textMuted }}
-                      >
-                        <Star className="size-2.5 fill-current" />
-                        {project.stars >= 1000
-                          ? `${(project.stars / 1000).toFixed(1)}k`
-                          : project.stars}
-                      </span>
-                    )}
-                  </div>
-                </motion.a>
-              ))}
-            </div>
-          </>
+                      </a>
+                    </motion.li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         )}
 
         {secondaryLinks.length > 0 && (
-          <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <p
-              className="mb-2 text-[9px] font-semibold uppercase tracking-widest"
-              style={{ color: textMuted }}
+          <div className={fullCol}>
+            <div className="my-5 h-px" style={{ background: dividerColor }} />
+            <h2
+              className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: textSecondary }}
             >
               Links
-            </p>
+            </h2>
             <div className="flex flex-col gap-2">
               {secondaryLinks.map((link, i) => {
-                const isFeatured =
-                  link.layout === "featured" && link.previewImage;
+                const preview = failedPreviews.has(link.id)
+                  ? null
+                  : link.previewImage;
+                const isFeatured = link.layout === "featured" && !!preview;
+                const featuredText = isFeatured ? "#ffffff" : linkText;
+                const host = displayHost(link.url);
+                const linkIcon = link.icon || iconFromUrl(link.url);
                 return (
                   <motion.a
                     key={link.id}
@@ -681,94 +821,147 @@ export function PublicProfileCard({
                     rel="noopener noreferrer"
                     onClick={() => trackClick(link.id)}
                     className={cn(
-                      "flex w-full overflow-hidden",
+                      "group flex w-full overflow-hidden [-webkit-tap-highlight-color:transparent]",
                       isFeatured
-                        ? "flex-col"
-                        : "min-h-13 w-full items-center  gap-3 px-4 py-3",
+                        ? "relative flex-col"
+                        : "min-h-[60px] items-center",
                     )}
                     style={{
                       borderRadius: isFeatured ? featuredRadius : bRadius,
                       ...(isFeatured
                         ? {
                             border: `1px solid ${bColor}35`,
-                            background: `${bColor}08`,
+                            background: `${bColor}14`,
                           }
                         : linkStyle),
                     }}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.2,
-                      delay: i * 0.05,
-                      ease: "easeOut",
+                    initial={
+                      reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }
+                    }
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.2,
+                        delay: i * 0.05,
+                        ease: EASE_OUT,
+                      },
                     }}
-                    whileHover={{ y: -2, scale: 1.01 }}
+                    whileHover={
+                      reduceMotion
+                        ? undefined
+                        : { y: -2, boxShadow: `0 10px 28px -10px ${bColor}99` }
+                    }
                     whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: EASE_OUT }}
                   >
                     {isFeatured && (
                       <Image
-                        src={link.previewImage!}
-                        alt={link.title}
+                        src={preview!}
+                        alt=""
                         width={480}
-                        height={120}
-                        className="h-[120px] w-full object-cover"
-                        style={{
-                          borderTopLeftRadius: featuredRadius,
-                          borderTopRightRadius: featuredRadius,
-                        }}
+                        height={251}
+                        className="aspect-[1.91/1] w-full object-cover transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-safe:group-hover:scale-[1.03]"
                         unoptimized
+                        onError={() =>
+                          setFailedPreviews((prev) =>
+                            new Set(prev).add(link.id),
+                          )
+                        }
                       />
                     )}
                     <div
                       className={cn(
-                        "flex w-full items-center gap-3",
-                        isFeatured && "px-4 py-3",
+                        "flex w-full items-center gap-3 py-2 pl-2 pr-4",
+                        isFeatured && "absolute inset-x-0 bottom-0 pt-12",
                       )}
+                      style={
+                        isFeatured
+                          ? {
+                              background:
+                                "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 55%, transparent 100%)",
+                            }
+                          : undefined
+                      }
                     >
-                      <div className="flex size-5 shrink-0 items-center justify-start">
-                        {!isFeatured && link.previewImage ? (
-                          <Image
-                            src={link.previewImage}
-                            alt={link.title}
-                            width={20}
-                            height={20}
-                            unoptimized
-                            className="size-5 rounded object-cover"
-                          />
-                        ) : link.icon ? (
-                          <Image
-                            src={iconUrl(link.icon, profile.accentColor)}
-                            alt={link.icon}
-                            width={14}
-                            height={14}
-                            unoptimized
-                            className="size-3.5 object-contain"
-                          />
-                        ) : null}
-                      </div>
                       <span
-                        className="flex-1 text-center text-[12px] font-medium leading-snug"
-                        style={{ color: textPrimary }}
+                        className="flex size-10 shrink-0 items-center justify-center overflow-hidden"
+                        style={{
+                          borderRadius: iconTileRadius,
+                          background: `color-mix(in srgb, ${featuredText} ${isFeatured ? 18 : 12}%, transparent)`,
+                        }}
                       >
-                        {link.title}
+                        {!isFeatured && preview ? (
+                          <Image
+                            src={preview}
+                            alt=""
+                            width={40}
+                            height={40}
+                            unoptimized
+                            onError={() =>
+                              setFailedPreviews((prev) =>
+                                new Set(prev).add(link.id),
+                              )
+                            }
+                            className="size-full object-cover"
+                          />
+                        ) : linkIcon ? (
+                          <Image
+                            src={iconUrl(
+                              linkIcon,
+                              isFeatured ? "#ffffff" : linkIconColor,
+                            )}
+                            alt=""
+                            width={18}
+                            height={18}
+                            unoptimized
+                            className="size-[18px] object-contain"
+                          />
+                        ) : (
+                          <Link2
+                            className="size-[18px]"
+                            strokeWidth={2}
+                            style={{ color: featuredText }}
+                          />
+                        )}
                       </span>
-                      <div className="flex size-5 shrink-0 items-center justify-end">
-                        <ChevronRight
-                          className="size-3.5"
-                          style={{ color: `${textPrimary}60` }}
-                        />
-                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className="block truncate text-[15px] font-semibold leading-snug"
+                          style={{ color: featuredText }}
+                        >
+                          {link.title}
+                        </span>
+                        {host && (
+                          <span
+                            className="block truncate text-[11px] leading-snug"
+                            style={{
+                              color: isFeatured
+                                ? "rgba(255,255,255,0.72)"
+                                : linkMuted,
+                            }}
+                          >
+                            {host}
+                          </span>
+                        )}
+                      </span>
+                      <ArrowUpRight
+                        aria-hidden
+                        className="size-4 shrink-0 opacity-70 transition-[opacity,translate] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                        strokeWidth={2}
+                        style={{ color: featuredText }}
+                      />
                     </div>
                   </motion.a>
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
-        <div className="mt-8 text-center">
+        <div className={cn("mt-10 text-center", w("lg:col-span-2"))}>
           <span
-            className="text-[9px] uppercase tracking-widest"
+            className="text-[10px] uppercase tracking-[0.08em]"
             style={{ color: textMuted }}
           >
             Creado por
@@ -784,143 +977,54 @@ export function PublicProfileCard({
         </div>
       </div>
 
-      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
-        <DialogContent className="gap-6 sm:max-w-sm">
-          <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
-
-          <div className="flex flex-col items-center gap-5">
-            <p className="text-base font-semibold text-foreground">
-              Compartir perfil
-            </p>
-
-            <div
-              className="flex w-full flex-col items-center gap-4 rounded-[24px] p-8"
-              style={{
-                background: cardBg,
-                border: `1px solid ${profile.accentColor}20`,
-              }}
-            >
-              <div
-                className="size-[88px] overflow-hidden rounded-full"
-                style={{
-                  background: profile.avatarUrl
-                    ? "transparent"
-                    : `${profile.accentColor}25`,
-                  boxShadow: `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}80, 0 6px 28px ${profile.accentColor}55`,
-                }}
-              >
-                {profile.avatarUrl ? (
-                  <Image
-                    src={profile.avatarUrl}
-                    alt={profile.displayName}
-                    width={88}
-                    height={88}
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <span
-                      className="text-lg font-bold"
-                      style={{ color: textPrimary }}
-                    >
-                      {profile.displayName.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col items-center gap-1">
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: textPrimary }}
-                >
-                  {profile.displayName}
-                </span>
-                <span
-                  className="flex items-center gap-1 text-sm"
-                  style={{ color: `${profile.accentColor}cc` }}
-                >
-                  <Image
-                    src="/logo.svg"
-                    alt="DevLinks"
-                    width={14}
-                    height={14}
-                    className="inline-block"
-                  />
-                  /{profile.username}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm cursor-pointer font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: profile.accentColor }}
-            >
-              {copied ? (
-                <Check className="size-4" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-              {copied ? "Link copiado" : "Copiar link"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ShareProfileDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        profile={profile}
+        publicUrl={publicUrl}
+        cardBg={cardBg}
+        textPrimary={textPrimary}
+      />
 
       {stickers.length > 0 && (
-        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden sm:overflow-visible">
-          {stickers.map((sticker, idx) => {
-            const meta = PROGRAMMING_STICKERS.find(
-              (s) => s.slug === sticker.id,
-            );
-            const color = meta?.brandColor ?? profile.accentColor;
-            const size = Math.round(56 * (sticker.scale ?? 1));
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[28px] lg:overflow-visible"
+        >
+          {stickers.map((raw, idx) => {
+            const sticker = clampSticker(raw);
+            const size = Math.round(STICKER_BASE_SIZE * (sticker.scale ?? 1));
             const isFloating = Boolean(sticker.animated) && !reduceMotion;
             return (
-              <motion.div
+              <div
                 key={`${sticker.id}-${idx}`}
                 className="absolute"
                 style={{
                   left: `${sticker.x}%`,
                   top: `${sticker.y}%`,
-                  width: size,
-                  height: size,
                   marginLeft: -size / 2,
                   marginTop: -size / 2,
-                  rotate: sticker.rotation,
+                  rotate: `${sticker.rotation ?? 0}deg`,
                 }}
-                animate={isFloating ? { y: [0, -7, 0] } : undefined}
-                transition={
-                  isFloating
-                    ? {
-                        duration: 2.6 + (idx % 3) * 0.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: (idx % 4) * 0.25,
-                      }
-                    : undefined
-                }
               >
                 <div
-                  className="absolute rounded-xl bg-white"
-                  style={{
-                    inset: -5,
-                    zIndex: -1,
-                    boxShadow: "0 3px 12px rgba(0,0,0,0.28)",
-                  }}
-                />
-                <Image
-                  src={iconUrl(sticker.id, color)}
-                  alt={sticker.id}
-                  width={size}
-                  height={size}
-                  unoptimized
-                  className="size-full select-none object-contain"
-                  draggable={false}
-                />
-              </motion.div>
+                  style={
+                    isFloating
+                      ? {
+                          animation: `sticker-float ${2.6 + (idx % 3) * 0.5}s ease-in-out ${(idx % 4) * 0.25}s infinite`,
+                        }
+                      : undefined
+                  }
+                >
+                  <StickerTile
+                    slug={sticker.id}
+                    color={stickerColor(sticker.id, profile.accentColor)}
+                    size={size}
+                    live={isFloating}
+                    delay={(idx % 4) * 0.8}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>

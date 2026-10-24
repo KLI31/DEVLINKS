@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, ChevronDown, LayoutTemplate } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import type { LinkItem } from "@/types";
 import { linkSchema, type LinkFormValues } from "@/lib/validations/link.schema";
 import { linksApi } from "@/lib/api";
@@ -22,10 +22,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { IconPicker } from "./IconPicker";
-import { LinkLayoutModal } from "./LinkLayoutModal";
 import { PLATFORM_ICONS, iconUrl } from "@/lib/icons";
 import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
+import { normalizeUrl } from "@/lib/links";
+
+const LAYOUT_OPTIONS = [
+  { value: "classic", label: "Classic", hint: "Compacto y directo" },
+  { value: "featured", label: "Featured", hint: "Con imagen destacada" },
+] as const;
 
 interface LinkFormModalProps {
   open: boolean;
@@ -63,8 +68,8 @@ export function LinkFormModal({
   });
 
   const [showPicker, setShowPicker] = useState(false);
-  const [layoutModalOpen, setLayoutModalOpen] = useState(false);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const lastFetchedUrl = useRef<string | null>(null);
   const iconValue = useWatch({ control, name: "icon" });
   const previewImageValue = useWatch({ control, name: "previewImage" });
   const isPrimaryValue = useWatch({ control, name: "isPrimary" });
@@ -73,6 +78,7 @@ export function LinkFormModal({
   useEffect(() => {
     if (open) {
       if (editingLink) {
+        lastFetchedUrl.current = editingLink.url;
         reset({
           title: editingLink.title,
           url: editingLink.url,
@@ -82,6 +88,7 @@ export function LinkFormModal({
           layout: editingLink.layout ?? "classic",
         });
       } else {
+        lastFetchedUrl.current = null;
         reset({
           title: "",
           url: "",
@@ -94,38 +101,55 @@ export function LinkFormModal({
     }
   }, [open, editingLink, reset]);
 
-  useEffect(() => {
-    if (isPrimaryValue) {
-      setValue("previewImage", undefined, { shouldDirty: true });
-    }
-  }, [isPrimaryValue, setValue]);
-
-  const fetchPreview = useCallback(async () => {
-    const currentUrl = getValues("url");
-    const currentIsPrimary = getValues("isPrimary");
-    if (!currentUrl || !currentUrl.startsWith("http")) return;
-    if (currentIsPrimary) return;
+  // Se ignora la respuesta si la URL cambió mientras se pedía, o si el modal se cerró.
+  const fetchPreview = async () => {
+    const url = getValues("url");
+    if (!url?.startsWith("http") || getValues("isPrimary")) return;
+    if (url === lastFetchedUrl.current) return;
+    lastFetchedUrl.current = url;
 
     setIsFetchingPreview(true);
     try {
-      const preview = await linksApi.getPreview(currentUrl);
+      const preview = await linksApi.getPreview(url);
+      if (getValues("url") !== url) return;
       if (preview.image) {
         setValue("previewImage", preview.image, { shouldDirty: true });
       }
-      const currentTitle = getValues("title");
-      if (!currentTitle && preview.title) {
-        setValue("title", preview.title, { shouldValidate: true, shouldDirty: true });
+      if (!getValues("title") && preview.title) {
+        setValue("title", preview.title.slice(0, 100), {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
       }
     } catch {
-      // Silently fail — preview is optional
+      lastFetchedUrl.current = null;
     } finally {
       setIsFetchingPreview(false);
     }
-  }, [getValues, setValue]);
+  };
+
+  const handleUrlBlur = () => {
+    const raw = getValues("url")?.trim();
+    if (raw && normalizeUrl(raw) !== raw) {
+      setValue("url", normalizeUrl(raw), { shouldValidate: true, shouldDirty: true });
+    }
+    void fetchPreview();
+  };
+
+  const handlePrimaryChange = (checked: boolean) => {
+    setValue("isPrimary", checked, { shouldDirty: true });
+    if (checked) {
+      setValue("previewImage", undefined, { shouldDirty: true });
+    } else {
+      lastFetchedUrl.current = null;
+      void fetchPreview();
+    }
+  };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setShowPicker(false);
+      lastFetchedUrl.current = null;
     }
     onOpenChange(nextOpen);
   };
@@ -163,7 +187,7 @@ export function LinkFormModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-full max-w-md">
+      <DialogContent className="max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain">
         <DialogHeader>
           <DialogTitle className="font-mono">
             {isEdit ? "Editar link" : "Nuevo link"}
@@ -197,7 +221,7 @@ export function LinkFormModal({
                 {...register("url")}
                 disabled={isSubmitting}
                 aria-invalid={errors.url ? "true" : "false"}
-                onBlur={fetchPreview}
+                onBlur={handleUrlBlur}
                 className={cn(isFetchingPreview && "pr-10")}
               />
               {isFetchingPreview && (
@@ -243,9 +267,7 @@ export function LinkFormModal({
             </div>
             <Switch
               checked={!!isPrimaryValue}
-              onCheckedChange={(checked) =>
-                setValue("isPrimary", checked, { shouldDirty: true })
-              }
+              onCheckedChange={handlePrimaryChange}
               disabled={isSubmitting}
             />
           </div>
@@ -308,21 +330,34 @@ export function LinkFormModal({
             </AnimatePresence>
           </div>
 
-          {/* Layout selector */}
-          <div className="flex flex-col gap-2">
-            <Label>Diseño</Label>
-            <button
-              type="button"
-              onClick={() => setLayoutModalOpen(true)}
-              className="flex cursor-pointer items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors hover:bg-muted"
-            >
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <LayoutTemplate className="size-4" />
-                {layoutValue === "featured" ? "Featured" : "Classic"}
-              </span>
-              <ChevronDown className="size-4 text-muted-foreground" />
-            </button>
-          </div>
+          {!isPrimaryValue && (
+            <div className="flex flex-col gap-2">
+              <Label>Diseño</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {LAYOUT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      setValue("layout", option.value, { shouldDirty: true })
+                    }
+                    aria-pressed={layoutValue === option.value}
+                    className={cn(
+                      "flex cursor-pointer flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors",
+                      layoutValue === option.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border/60 hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {option.hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-2 flex items-center gap-2 pt-2">
             <Button
@@ -343,15 +378,6 @@ export function LinkFormModal({
               {isEdit ? "Guardar cambios" : "Crear link"}
             </Button>
           </div>
-
-          <LinkLayoutModal
-            open={layoutModalOpen}
-            onOpenChange={setLayoutModalOpen}
-            value={layoutValue ?? "classic"}
-            onChange={(layout) =>
-              setValue("layout", layout, { shouldDirty: true })
-            }
-          />
         </form>
       </DialogContent>
     </Dialog>

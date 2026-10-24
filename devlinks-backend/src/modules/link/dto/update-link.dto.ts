@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsBoolean,
   IsIn,
+  IsDateString,
+  ValidateIf,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -44,4 +46,14 @@ export class UpdateLinkDto {
   @IsOptional()
   @IsIn(['classic', 'featured'])
   layout?: 'classic' | 'featured';
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsDateString()
+  scheduledStart?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsDateString()
+  scheduledEnd?: string | null;
 }

@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
 
 import { HeroBackground } from "@/components/layout/HeroBackground";
 import { HoloSticker } from "@/components/layout/HoloSticker";
@@ -11,6 +10,7 @@ import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import {
   DEMO_GITHUB_STATS,
   DEMO_PROFILE,
+  DEMO_SIDE_PROFILES,
   DEMO_PROJECTS,
 } from "@/lib/landing-demo";
 import { cn, getPublicProfileUrlPrefix } from "@/lib/utils";
@@ -156,60 +156,20 @@ function SocialProof() {
   );
 }
 
-type DemoCardProps = {
-  initials: string;
-  name: string;
-  role: string;
-  links: string[];
-  className: string;
-  linkClassName: string;
-  avatarClassName: string;
-};
-
-function DemoCard({
-  initials,
-  name,
-  role,
-  links,
-  className,
-  linkClassName,
-  avatarClassName,
-}: DemoCardProps) {
+function SideCard({ index }: { index: 0 | 1 }) {
+  const { profile, projects, stats } = DEMO_SIDE_PROFILES[index];
   return (
     <div
-      className={cn(
-        "w-72 rounded-[1.75rem] p-5 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.45)]",
-        className,
-      )}
+      inert
+      className="h-[38rem] w-[20rem] overflow-hidden rounded-[30px] ring-1 ring-border shadow-[0_24px_60px_-20px_rgb(0_0_0/0.45)]"
     >
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            "inline-flex size-12 items-center justify-center rounded-full text-sm font-bold",
-            avatarClassName,
-          )}
-        >
-          {initials}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate font-bold">{name}</p>
-          <p className="truncate text-xs opacity-75">{role}</p>
-        </div>
-      </div>
-      <ul className="mt-5 space-y-2.5">
-        {links.map((link) => (
-          <li
-            key={link}
-            className={cn(
-              "flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-medium",
-              linkClassName,
-            )}
-          >
-            {link}
-            <ArrowRight className="size-4" aria-hidden />
-          </li>
-        ))}
-      </ul>
+      <PublicProfileCard
+        profile={profile}
+        projects={projects}
+        githubStats={stats}
+        hideShare
+        demo
+      />
     </div>
   );
 }
@@ -218,47 +178,32 @@ function DemoCards() {
   return (
     <div
       aria-hidden
-      className="relative mt-16 flex w-full items-start justify-center gap-4 overflow-hidden px-4 pt-6 sm:mt-20 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"
+      className="relative mt-16 flex w-full items-start justify-center gap-4 overflow-hidden px-4 pt-6 sm:mt-20 [mask-image:linear-gradient(to_bottom,black_55%,rgb(0_0_0/0.6)_75%,rgb(0_0_0/0.2)_90%,transparent)]"
     >
       <div
         style={{ "--r": "-4deg", "--d": "500ms" } as React.CSSProperties}
         className="animate-hero-card hidden translate-y-10 transition-transform duration-300 ease-out motion-safe:hover:translate-y-4 md:block"
       >
-        <DemoCard
-          initials="AR"
-          name="Ana Rivera"
-          role="Backend Engineer"
-          links={["Portafolio", "Blog", "Charlas"]}
-          className="bg-card text-card-foreground"
-          linkClassName="bg-muted/60"
-          avatarClassName="bg-primary text-primary-foreground"
-        />
+        <SideCard index={0} />
       </div>
       <div
         inert
         style={{ "--d": "400ms" } as React.CSSProperties}
-        className="animate-hero-card relative z-10 h-[34rem] w-[22rem] shrink-0 overflow-hidden rounded-[30px] ring-1 ring-border"
+        className="animate-hero-card relative z-10 h-[44rem] w-[22rem] shrink-0 overflow-hidden rounded-[30px] ring-1 ring-border"
       >
         <PublicProfileCard
           profile={DEMO_PROFILE}
           projects={DEMO_PROJECTS}
           githubStats={DEMO_GITHUB_STATS}
           hideShare
+          demo
         />
       </div>
       <div
         style={{ "--r": "4deg", "--d": "600ms" } as React.CSSProperties}
         className="animate-hero-card hidden translate-y-10 transition-transform duration-300 ease-out motion-safe:hover:translate-y-4 md:block"
       >
-        <DemoCard
-          initials="SC"
-          name="Sofía Cruz"
-          role="DevRel · Speaker"
-          links={["Próximas charlas", "Newsletter", "YouTube"]}
-          className="bg-second text-white"
-          linkClassName="bg-white/15"
-          avatarClassName="bg-white text-second-dark"
-        />
+        <SideCard index={1} />
       </div>
     </div>
   );
@@ -270,9 +215,19 @@ const STICKERS: {
   r: string;
   d: string;
 }[] = [
-  { icon: "typescript", className: "left-[6%] top-40", r: "-12deg", d: "700ms" },
+  {
+    icon: "typescript",
+    className: "left-[6%] top-40",
+    r: "-12deg",
+    d: "700ms",
+  },
   { icon: "python", className: "left-[13%] top-80", r: "8deg", d: "850ms" },
-  { icon: "docker", className: "left-[5%] top-[30rem]", r: "-6deg", d: "1000ms" },
+  {
+    icon: "docker",
+    className: "left-[5%] top-[30rem]",
+    r: "-6deg",
+    d: "1000ms",
+  },
   { icon: "react", className: "right-[6%] top-36", r: "10deg", d: "750ms" },
   { icon: "rust", className: "right-[13%] top-72", r: "-9deg", d: "900ms" },
   { icon: "go", className: "right-[5%] top-[29rem]", r: "6deg", d: "1050ms" },
@@ -280,7 +235,10 @@ const STICKERS: {
 
 function HoloStickers() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 hidden xl:block">
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-10 hidden xl:block"
+    >
       {STICKERS.map(({ icon, className, r, d }) => (
         <HoloSticker
           key={icon}
@@ -315,8 +273,7 @@ export function Hero() {
           <span className="shiny-border inline-block -rotate-2 rounded-2xl bg-primary px-3 text-primary-foreground shadow-[0_12px_40px_-12px_var(--color-primary)]">
             <span aria-hidden className="sheen" />
             <span className="sr-only">60</span>
-            <span aria-hidden className="animate-count tabular-nums" />{" "}
-            segundos
+            <span aria-hidden className="animate-count tabular-nums" /> segundos
           </span>
         </h1>
 

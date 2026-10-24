@@ -9,14 +9,19 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { AppearancePanel } from "@/components/customize/AppearancePanel";
 import { CustomizeCanvas } from "@/components/customize/CustomizeCanvas";
 import { StickersFloatingPanel } from "@/components/customize/StickersFloatingPanel";
 import { useCustomize } from "@/hooks/useCustomize";
-import { iconUrl } from "@/lib/icons";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import {
+  StickerTile,
+  STICKER_BASE_SIZE,
+  STICKER_MAX,
+  clampSticker,
+} from "@/components/profile/StickerTile";
 
 interface ActiveSticker {
   slug: string;
@@ -77,20 +82,22 @@ export default function CustomizePage() {
     const x = (pointerX - rect.left) / rect.width;
     const y = (pointerY - rect.top) / rect.height;
 
-    const clampedX = Math.max(-2.0, Math.min(3.0, x));
-    const clampedY = Math.max(-2.0, Math.min(3.0, y));
+    if (values.stickers.length >= STICKER_MAX) return;
 
-    if (values.stickers.length >= 8) return;
-
+    const placed = clampSticker({
+      id: stickerSlug,
+      x: x * 100,
+      y: y * 100,
+      rotation: Math.round((Math.random() * 16 - 8) * 10) / 10,
+      scale: 1,
+      animated: animationEnabled,
+    });
     updateStickers([
       ...values.stickers,
       {
-        id: stickerSlug,
-        x: Math.round(clampedX * 1000) / 10,
-        y: Math.round(clampedY * 1000) / 10,
-        rotation: Math.round((Math.random() * 16 - 8) * 10) / 10,
-        scale: 1,
-        animated: animationEnabled,
+        ...placed,
+        x: Math.round(placed.x * 10) / 10,
+        y: Math.round(placed.y * 10) / 10,
       },
     ]);
   };
@@ -123,17 +130,20 @@ export default function CustomizePage() {
           isStickersMode ? "flex-1 overflow-auto" : "flex-1"
         )}>
           {isStickersMode && (
-            <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
-              <a
-                href="?"
-                className="flex items-center gap-1 rounded-lg border border-border/50 bg-card/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm transition-colors hover:bg-muted/50 cursor-pointer"
+            <div className="absolute left-4 top-4 z-20 flex items-center gap-3">
+              <Link
+                href="/dashboard/customize"
+                replace
+                scroll={false}
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card pl-2 pr-3 text-[12px] font-medium text-foreground transition-[background-color,scale] duration-150 ease-out hover:bg-muted active:scale-[0.96]"
               >
-                <ChevronLeft className="size-3.5" />
+                <ChevronLeft className="size-4" />
                 Volver
-              </a>
-              <span className="text-xs font-semibold text-foreground">
-                ✨ Stickers
-              </span>
+              </Link>
+              <p className="hidden max-w-[340px] text-[12px] leading-snug text-muted-foreground xl:block">
+                Selecciona un sticker para moverlo, cambiar su tamaño desde la
+                esquina o quitarlo.
+              </p>
             </div>
           )}
 
@@ -157,40 +167,13 @@ export default function CustomizePage() {
 
       <DragOverlay dropAnimation={null}>
         {activeSticker ? (
-          <div
-            className="relative flex items-center justify-center rounded-xl"
-            style={{
-              width: 56,
-              height: 56,
-              background: `${activeSticker.brandColor}15`,
-              border: `1px solid ${activeSticker.brandColor}50`,
-              rotate: "-6deg",
-            }}
-          >
-            <div
-              className="absolute rounded-xl bg-white"
-              style={{
-                inset: -6,
-                zIndex: -1,
-                boxShadow: `0 12px 40px ${activeSticker.brandColor}50, 0 4px 16px rgba(0,0,0,0.35)`,
-              }}
-            />
-
-            <Image
-              src={iconUrl(activeSticker.slug, activeSticker.brandColor)}
-              alt={activeSticker.slug}
-              width={56}
-              height={56}
-              unoptimized
-              style={{
-                width: 56,
-                height: 56,
-                objectFit: "contain",
-                pointerEvents: "none",
-              }}
-              draggable={false}
-            />
-          </div>
+          <StickerTile
+            slug={activeSticker.slug}
+            color={activeSticker.brandColor}
+            size={STICKER_BASE_SIZE}
+            lifted
+            className="-rotate-6 cursor-grabbing"
+          />
         ) : null}
       </DragOverlay>
     </DndContext>

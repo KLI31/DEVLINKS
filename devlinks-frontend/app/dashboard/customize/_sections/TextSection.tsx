@@ -15,7 +15,7 @@ export function TextSection({ values, update, onBack }: TextSectionProps) {
   return (
     <div className="flex h-full flex-col">
       <SectionHeader title="Texto" onBack={onBack} />
-      <div className="scroll-thin flex-1 space-y-5 overflow-y-auto pr-1">
+      <div className="scroll-thin flex-1 space-y-6 overflow-y-auto overscroll-contain pr-1">
         <FontSelector
           label="Fuente de la página"
           value={values.fontFamily}

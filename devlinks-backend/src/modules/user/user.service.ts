@@ -139,11 +139,23 @@ export class UserService {
   }
 
   async getPublicProfile(username: string): Promise<UserProfile> {
+    const now = new Date();
     const user = await this.prisma.user.findUnique({
       where: { username },
       include: {
         links: {
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            AND: [
+              {
+                OR: [
+                  { scheduledStart: null },
+                  { scheduledStart: { lte: now } },
+                ],
+              },
+              { OR: [{ scheduledEnd: null }, { scheduledEnd: { gt: now } }] },
+            ],
+          },
           orderBy: { displayOrder: 'asc' },
           select: {
             id: true,
