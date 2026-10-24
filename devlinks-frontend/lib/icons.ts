@@ -104,3 +104,35 @@ export function iconUrl(slug: string, color?: string): string {
     ? `https://cdn.simpleicons.org/${slug}/${hex}`
     : `https://cdn.simpleicons.org/${slug}`;
 }
+
+const HOST_ALIASES: Record<string, string> = {
+  "youtu.be": "youtube",
+  "x.com": "x",
+  "twitter.com": "x",
+  "dev.to": "devdotto",
+  "ko-fi.com": "kofi",
+  "t.me": "telegram",
+  "wa.me": "whatsapp",
+  "bsky.app": "bluesky",
+  "music.apple.com": "applemusic",
+  "discord.gg": "discord",
+  "redd.it": "reddit",
+  "fb.com": "facebook",
+};
+
+const KNOWN_SLUGS = new Set<string>(PLATFORM_ICONS.map((p) => p.slug));
+
+export function iconFromUrl(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  const labels = host.split(".");
+  const root = labels.slice(-2).join(".");
+  const alias = HOST_ALIASES[host] ?? HOST_ALIASES[root];
+  if (alias) return alias;
+  const name = labels.at(-2)?.replace(/-/g, "");
+  return name && KNOWN_SLUGS.has(name) ? name : null;
+}

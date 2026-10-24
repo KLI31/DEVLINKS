@@ -1,6 +1,11 @@
 "use client";
 
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+} from "motion/react";
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import {
@@ -12,11 +17,8 @@ import {
   Users,
   AtSign,
   Share2,
-  Copy,
-  Check,
 } from "lucide-react";
 import { getDevIconUrl } from "@/lib/api/github.api";
-import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import type {
   PublicProfile,
@@ -24,15 +26,28 @@ import type {
   PlacedSticker,
   GithubStats,
 } from "@/types";
-import { iconUrl } from "@/lib/icons";
+import { iconFromUrl, iconUrl } from "@/lib/icons";
 import {
   StickerTile,
   STICKER_BASE_SIZE,
   clampSticker,
   stickerColor,
 } from "@/components/profile/StickerTile";
-import { getProfileUrl } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { getProfileUrl, perceivedLuminance } from "@/lib/utils";
+import { ShareProfileDialog } from "@/components/profile/ShareProfileDialog";
+import {
+  HeatmapCells,
+  HeatmapChart,
+  HeatmapInteractionBoundary,
+  HeatmapInteractionProvider,
+  HeatmapLegend,
+  HeatmapSeparator,
+  HeatmapTooltip,
+  HeatmapXAxis,
+  HeatmapYAxis,
+  type HeatmapColumn,
+  type HeatmapLevelStyles,
+} from "@/components/charts/heatmap";
 
 const BUTTON_SHADOW_CSS: Record<string, string> = {
   none: "none",
@@ -68,8 +83,11 @@ const LANG_COLOR: Record<string, string> = {
   Kotlin: "#A97BFF",
 };
 
-const HEATMAP_MIX = [0, 30, 55, 80, 100] as const;
+const HEATMAP_MIX = [0, 42, 62, 82, 100] as const;
 const HEATMAP_WEEKS = 26;
+const HEATMAP_MARGIN = { top: 18, right: 0, bottom: 0, left: 20 };
+const GITHUB_LINK_ID = "github-profile";
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 
@@ -81,17 +99,17 @@ function timeAgo(ts: number): string {
   return RELATIVE_TIME.format(Math.round(hours / 24), "day");
 }
 
-function formatDay(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("es", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+function parseDay(iso: string): Date {
+  return new Date(
+    Number(iso.slice(0, 4)),
+    Number(iso.slice(5, 7)) - 1,
+    Number(iso.slice(8, 10)),
+  );
 }
 
-const COVER_FADE =
-  "linear-gradient(to bottom, #000 55%, transparent 100%)";
+function formatContributionLabel(n: number): string {
+  return `${n} ${n === 1 ? "contribución" : "contribuciones"}`;
+}
 
 function displayHost(url: string): string {
   try {
@@ -99,14 +117,6 @@ function displayHost(url: string): string {
   } catch {
     return "";
   }
-}
-
-function perceivedLuminance(hex: string): number {
-  const clean = hex.replace("#", "").padEnd(6, "0");
-  const r = parseInt(clean.slice(0, 2), 16) / 255;
-  const g = parseInt(clean.slice(2, 4), 16) / 255;
-  const b = parseInt(clean.slice(4, 6), 16) / 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
 function formatCount(n: number): string {
@@ -121,6 +131,7 @@ interface PublicProfileCardProps {
   githubStats?: GithubStats | null;
   hideShare?: boolean;
   demo?: boolean;
+  wide?: boolean;
 }
 
 export function PublicProfileCard({
@@ -129,14 +140,17 @@ export function PublicProfileCard({
   githubStats: initialStats,
   hideShare = false,
   demo = false,
+  wide = false,
 }: PublicProfileCardProps) {
-  const { notifySuccess, notifyError } = useNotifications();
+  const w = (cls: string) => (wide ? cls : "");
   const reduceMotion = useReducedMotion();
   const coverRef = useRef<HTMLDivElement>(null);
 
   const [githubStats, setGithubStats] = useState<GithubStats | null>(
     initialStats ?? null,
   );
+
+  const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (initialStats !== undefined) return;
@@ -157,25 +171,13 @@ export function PublicProfileCard({
   const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
 
   const [shareOpen, setShareOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const publicUrl = getProfileUrl(profile.username);
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      notifySuccess("Link copiado al portapapeles");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      notifyError("Error al copiar el link");
-    }
-  };
-
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
-  const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
-  const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
-  const textSecondary = isLight ? "rgba(0,0,0,0.58)" : "rgba(255,255,255,0.62)";
-  const dividerColor = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
+  const textPrimary = isLight ? "rgba(0,0,0,0.92)" : "rgba(255,255,255,0.96)";
+  const textMuted = isLight ? "rgba(0,0,0,0.74)" : "rgba(255,255,255,0.74)";
+  const textSecondary = isLight ? "rgba(0,0,0,0.84)" : "rgba(255,255,255,0.86)";
+  const dividerColor = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)";
 
   const fontFamily = FONT_CSS[profile.fontFamily] ?? FONT_CSS["jetbrains-mono"];
   const titleFontFamily = profile.altTitleFont
@@ -199,7 +201,8 @@ export function PublicProfileCard({
     : textSecondary;
   const linkIconColor = isSolid ? linkText : profile.accentColor;
   const radiusPx = profile.buttonRadius ?? 8;
-  const iconTileRadius = radiusPx >= 9999 ? "9999px" : `${Math.max(radiusPx - 8, 6)}px`;
+  const iconTileRadius =
+    radiusPx >= 9999 ? "9999px" : `${Math.max(radiusPx - 8, 6)}px`;
   const bShadow = BUTTON_SHADOW_CSS[profile.buttonShadow ?? "none"] ?? "none";
 
   const cardBg =
@@ -257,19 +260,19 @@ export function PublicProfileCard({
           label: "Repositorios",
           value: formatCount(githubStats.totalRepos),
           Icon: Code2,
-          iconColor: "#22d3ee",
+          iconColor: isLight ? "#0e7490" : "#22d3ee",
         },
         {
           label: "Seguidores",
           value: formatCount(githubStats.followers),
           Icon: Users,
-          iconColor: "#4ade80",
+          iconColor: isLight ? "#15803d" : "#4ade80",
         },
         {
           label: "Stars",
           value: formatCount(totalStars),
           Icon: Star,
-          iconColor: "#facc15",
+          iconColor: isLight ? "#a16207" : "#facc15",
         },
       ]
     : [];
@@ -281,493 +284,535 @@ export function PublicProfileCard({
 
   const contributions = githubStats?.contributions ?? [];
   const recentDays = contributions.slice(-(HEATMAP_WEEKS * 7));
-  // Las fechas se normalizan a YYYY-MM-DD (UTC); getUTCDay evita el corrimiento de un día en zonas horarias negativas.
-  const firstDow =
-    recentDays.length > 0
-      ? new Date(`${recentDays[0].date.slice(0, 10)}T00:00:00Z`).getUTCDay()
-      : 0;
-  const paddedDays = [...Array(firstDow).fill(null), ...recentDays];
-  const heatmapWeeks: ((typeof recentDays)[0] | null)[][] = [];
-  for (let i = 0; i < paddedDays.length; i += 7) {
-    heatmapWeeks.push(paddedDays.slice(i, i + 7));
-  }
-  let lastLabelWeek = -3;
-  const monthLabels = heatmapWeeks.map((week, wi) => {
-    const firstOfMonth = week.find(
-      (d) => d && Number(d.date.slice(8, 10)) <= 7,
-    );
-    if (!firstOfMonth || wi - lastLabelWeek < 3) return null;
-    lastLabelWeek = wi;
-    return new Date(`${firstOfMonth.date.slice(0, 10)}T00:00:00Z`).toLocaleDateString("es", {
-      month: "short",
-      timeZone: "UTC",
-    });
-  });
-  const periodContributions = recentDays.reduce((s, d) => s + d.count, 0);
-  const heatColor = (level: number) =>
-    level === 0
-      ? isLight
-        ? "rgba(0,0,0,0.06)"
-        : "rgba(255,255,255,0.06)"
-      : `color-mix(in srgb, ${profile.accentColor} ${HEATMAP_MIX[level]}%, ${isLight ? "#fff" : profile.bgColor})`;
-
-  const ctaHref = profile.githubUsername && !demo
-    ? `https://github.com/${profile.githubUsername}`
+  const firstDay = recentDays.length > 0 ? parseDay(recentDays[0].date) : null;
+  const gridStart = firstDay
+    ? new Date(
+        firstDay.getFullYear(),
+        firstDay.getMonth(),
+        firstDay.getDate() - firstDay.getDay(),
+      )
     : null;
+  const leadingBlanks = firstDay?.getDay() ?? 0;
+  const dayCounts = new Map(
+    recentDays.map((d) => [parseDay(d.date).getTime(), d.count]),
+  );
+  const heatmapColumns: HeatmapColumn[] = gridStart
+    ? Array.from(
+        { length: Math.ceil((leadingBlanks + recentDays.length) / 7) },
+        (_, w) => ({
+          bin: w,
+          bins: Array.from({ length: 7 }, (_, d) => ({
+            bin: d,
+            count: recentDays[w * 7 + d - leadingBlanks]?.level ?? 0,
+            date: new Date(
+              gridStart.getFullYear(),
+              gridStart.getMonth(),
+              gridStart.getDate() + w * 7 + d,
+            ),
+          })),
+        }),
+      )
+    : [];
+  const periodContributions = recentDays.reduce((s, d) => s + d.count, 0);
+  const heatLevelStyles = HEATMAP_MIX.map((mix, level) => ({
+    color:
+      level === 0
+        ? isLight
+          ? "rgba(0,0,0,0.08)"
+          : "rgba(255,255,255,0.09)"
+        : `color-mix(in srgb, ${profile.accentColor} ${mix}%, ${isLight ? "#fff" : profile.bgColor})`,
+  })) as unknown as HeatmapLevelStyles;
+
+  const githubUrl =
+    profile.githubUsername && !demo
+      ? `https://github.com/${profile.githubUsername}`
+      : null;
+  const hasGithubLink = primaryLinks.some(
+    (l) => l.url.replace(/\/$/, "").toLowerCase() === githubUrl?.toLowerCase(),
+  );
+  const iconLinks: {
+    id: string;
+    url: string;
+    title: string;
+    icon?: string | null;
+  }[] =
+    githubUrl && !hasGithubLink
+      ? [
+          {
+            id: GITHUB_LINK_ID,
+            url: githubUrl,
+            title: "GitHub",
+            icon: "github",
+          },
+          ...primaryLinks,
+        ]
+      : primaryLinks;
   const surfaceSubtle = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.06)";
-  const coverHeight = 300;
+  const hasLeftCol = heatmapColumns.length > 0 || hasProjects;
+  const splitBody = hasLeftCol && secondaryLinks.length > 0;
+  const fullCol = splitBody ? "" : w("lg:col-span-2");
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[480px] rounded-[28px] isolate"
+      className={cn(
+        "relative mx-auto w-full max-w-[480px] rounded-[28px] isolate",
+        w("lg:max-w-[1040px]"),
+      )}
       style={{
         fontFamily,
-        background: cardBg,
+        background: wide ? "transparent" : cardBg,
         border: "1px solid transparent",
-        boxShadow: `0 0 0 1px ${isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"}, 0 2px 4px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.28)`,
+        boxShadow: wide
+          ? "none"
+          : `0 0 0 1px ${isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"}, 0 2px 4px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.28)`,
       }}
     >
       {!hideShare && (
         <button
           type="button"
           onClick={() => setShareOpen(true)}
-          className="absolute top-3 right-3 z-30 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 text-black/80 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.16)] transition-[scale,background-color] duration-150 ease-out [-webkit-tap-highlight-color:transparent] hover:bg-white active:scale-[0.96]"
+          className="absolute top-3 right-3 z-30 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 text-black/80 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.16)] transition-[scale,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [-webkit-tap-highlight-color:transparent] hover:bg-white active:scale-[0.96]"
           aria-label="Compartir perfil"
         >
           <Share2 className="size-[18px]" strokeWidth={2} />
         </button>
       )}
 
-      <div
-        ref={coverRef}
-        className="relative w-full overflow-hidden rounded-t-[27px]"
-        style={{ height: coverHeight }}
-      >
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            ...coverBg,
-            ...(!reduceMotion &&
-              !demo && { opacity: coverOpacity, scale: coverScale }),
-            WebkitMaskImage: COVER_FADE,
-            maskImage: COVER_FADE,
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 px-6 pb-8">
+      <div className={cn("relative", w("lg:min-h-[460px]"))}>
         <div
-          className="relative size-[88px] overflow-hidden rounded-full"
-          style={{
-            marginTop: -128,
-            background: profile.avatarUrl
-              ? profile.bgColor
-              : `color-mix(in srgb, ${profile.accentColor} 25%, ${profile.bgColor})`,
-            boxShadow: demo
-              ? "0 12px 32px rgba(0,0,0,0.32)"
-              : `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}99, 0 12px 32px rgba(0,0,0,0.32)`,
-          }}
-        >
-          {profile.avatarUrl ? (
-            <Image
-              src={profile.avatarUrl}
-              alt={profile.displayName}
-              width={88}
-              height={88}
-              className={cn(
-                "size-full rounded-full object-cover outline-1 -outline-offset-1",
-                isLight ? "outline-black/10" : "outline-white/10",
-              )}
-              priority
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center">
-              <span
-                className="text-xl font-bold"
-                style={{ color: textPrimary }}
-              >
-                {profile.displayName.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
+          ref={coverRef}
+          className={cn(
+            "relative h-[300px] w-full overflow-hidden rounded-t-[27px]",
+            w(
+              "lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[64%] lg:rounded-t-none lg:rounded-tr-[27px]",
+            ),
           )}
+        >
+          <motion.div
+            className={cn(
+              "absolute inset-0 [mask-image:linear-gradient(to_bottom,#000_55%,transparent_100%)]",
+              w(
+                "lg:[mask-composite:intersect] lg:[mask-image:linear-gradient(to_right,transparent_0%,#000_55%),linear-gradient(to_bottom,#000_70%,transparent_100%)]",
+              ),
+            )}
+            style={{
+              ...coverBg,
+              ...(!reduceMotion &&
+                !demo && { opacity: coverOpacity, scale: coverScale }),
+            }}
+          />
         </div>
 
-        <h1
-          className="mt-3 text-[26px] font-bold leading-tight tracking-[-0.02em] text-balance"
-          style={{ color: textPrimary, fontFamily: titleFontFamily }}
+        <div
+          className={cn(
+            "relative z-10 px-6",
+            w("lg:max-w-[52%] lg:px-12 lg:py-14"),
+          )}
         >
-          {profile.displayName}
-        </h1>
-
-        {profile.bio && (
-          <p
-            className="mt-1 text-[13px] leading-relaxed text-pretty"
+          <div
+            className={cn(
+              "animate-card-rise relative size-[88px] overflow-hidden rounded-full -mt-32",
+              w("lg:mt-0"),
+            )}
             style={{
-              color: textSecondary,
-              fontFamily:
-                profile.bio.length > 40 ? FONT_CSS.inter : undefined,
+              background: profile.avatarUrl
+                ? profile.bgColor
+                : `color-mix(in srgb, ${profile.accentColor} 25%, ${profile.bgColor})`,
+              boxShadow: demo
+                ? "0 12px 32px rgba(0,0,0,0.32)"
+                : `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}99, 0 12px 32px rgba(0,0,0,0.32)`,
             }}
           >
-            {profile.bio}
-          </p>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div
-            className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12px]"
-            style={{ color: textSecondary }}
-          >
-            <span className="flex items-center gap-1.5">
-              <AtSign className="size-3.5 shrink-0" strokeWidth={1.75} />
-              {profile.username}
-            </span>
-            {profile.location && (
-              <span className="flex min-w-0 items-center gap-1.5">
-                <MapPin className="size-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="truncate">{profile.location}</span>
-              </span>
-            )}
-          </div>
-
-          {stackLanguages.length > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {stackLanguages.map((l) => (
-                  <Image
-                    key={l.language}
-                    src={l.icon!}
-                    alt={l.language}
-                    title={`${l.language} · ${l.pct}%`}
-                    width={16}
-                    height={16}
-                    unoptimized
-                    className="size-4 object-contain"
-                  />
-                ))}
-              </div>
-              <span
-                className="text-[12px] font-medium"
-                style={{ color: textPrimary }}
-              >
-                Stack
-              </span>
-            </div>
-          )}
-        </div>
-
-        {primaryLinks.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {primaryLinks.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={link.title}
-                aria-label={link.title}
-                onClick={() => trackClick(link.id)}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full transition-[scale,opacity] duration-150 ease-out hover:opacity-80 active:scale-[0.96]"
-                style={{ background: surfaceSubtle }}
-              >
-                <Image
-                  src={iconUrl(link.icon ?? "link", profile.accentColor)}
-                  alt=""
-                  width={20}
-                  height={20}
-                  unoptimized
-                  className="size-5 object-contain"
-                />
-              </a>
-            ))}
-          </div>
-        )}
-
-        {(statsItems.length > 0 || ctaHref) && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-            {statsItems.length > 0 && (
-              <dl className="flex items-stretch">
-                {statsItems.map(({ label, value, Icon, iconColor }, i) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center gap-1 px-3.5 first:pl-0"
-                    style={
-                      i > 0
-                        ? { borderLeft: `1px solid ${dividerColor}` }
-                        : undefined
-                    }
-                  >
-                    <dd className="flex items-center gap-1.5">
-                      <Icon
-                        className="size-3.5"
-                        strokeWidth={2.25}
-                        style={{ color: iconColor }}
-                      />
-                      <span
-                        className="text-[15px] font-semibold tabular-nums leading-none"
-                        style={{ color: textPrimary }}
-                      >
-                        {value}
-                      </span>
-                    </dd>
-                    <dt
-                      className="text-[11px] leading-tight"
-                      style={{ color: textMuted }}
-                    >
-                      {label}
-                    </dt>
-                  </div>
-                ))}
-              </dl>
-            )}
-
-            {ctaHref && (
-              <a
-                href={ctaHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Ver perfil de ${profile.githubUsername} en GitHub (abre en una pestaña nueva)`}
-                className="group ml-auto flex h-11 items-center gap-2.5 rounded-xl pl-2 pr-3 text-[13px] font-medium outline-none transition-[scale,background-color,border-color] duration-150 ease-out hover:bg-[var(--cta-hover)] focus-visible:ring-2 focus-visible:ring-[var(--cta-ring)] active:scale-[0.97] motion-reduce:active:scale-100"
-                style={
-                  {
-                    color: textPrimary,
-                    "--cta-hover": isLight
-                      ? "rgba(0,0,0,0.09)"
-                      : "rgba(255,255,255,0.1)",
-                    "--cta-ring": profile.accentColor,
-                  } as React.CSSProperties
-                }
-              >
+            {profile.avatarUrl ? (
+              <Image
+                src={profile.avatarUrl}
+                alt={profile.displayName}
+                width={88}
+                height={88}
+                className={cn(
+                  "size-full rounded-full object-cover outline-1 -outline-offset-1",
+                  isLight ? "outline-black/10" : "outline-white/10",
+                )}
+                priority
+              />
+            ) : (
+              <div className="flex size-full items-center justify-center">
                 <span
-                  className="flex size-7 items-center justify-center rounded-lg"
-                  style={{
-                    background: isLight ? "#111" : "rgba(255,255,255,0.94)",
-                    color: isLight ? "#fff" : "#0a0a0a",
-                  }}
+                  className="text-xl font-bold"
+                  style={{ color: textPrimary }}
                 >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="size-4"
-                  >
-                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                  </svg>
+                  {profile.displayName.slice(0, 2).toUpperCase()}
                 </span>
-                <span className="flex flex-col leading-none">
-                  <span className="text-[10px]" style={{ color: textMuted }}>
-                    github.com/
-                  </span>
-                  <span className="mt-0.5 max-w-[9rem] truncate">
-                    {profile.githubUsername}
-                  </span>
-                </span>
-                <ArrowUpRight
-                  aria-hidden="true"
-                  className="size-4 shrink-0 opacity-50 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
-                />
-              </a>
+              </div>
             )}
           </div>
-        )}
 
-        {heatmapWeeks.length > 0 && githubStats && (
-          <section aria-label="Actividad en GitHub">
-            <div className="my-5 h-px" style={{ background: dividerColor }} />
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2
-                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
-                style={{ color: textMuted }}
-              >
-                Actividad
-              </h2>
-              <span
-                className="text-[11px] tabular-nums"
-                style={{ color: textMuted }}
-                suppressHydrationWarning
-              >
-                <span style={{ color: textPrimary }}>
-                  {formatCount(periodContributions)}
-                </span>{" "}
-                contribuciones · {timeAgo(githubStats.fetchedAt)}
-              </span>
-            </div>
+          <h1
+            className={cn(
+              "animate-card-rise [--i:1] mt-3 text-[26px] font-bold leading-tight tracking-[-0.02em] text-balance",
+              w("lg:text-[34px]"),
+            )}
+            style={{ color: textPrimary, fontFamily: titleFontFamily }}
+          >
+            {profile.displayName}
+          </h1>
 
-            <div
-              role="img"
-              aria-label={`${periodContributions} contribuciones en los últimos ${HEATMAP_WEEKS * 7} días`}
-              className="grid gap-[3px]"
+          {profile.bio && (
+            <p
+              className="animate-card-rise [--i:2] mt-1.5 text-[15px] leading-relaxed text-pretty"
               style={{
-                gridTemplateColumns: `repeat(${heatmapWeeks.length}, minmax(0, 1fr))`,
+                color: textSecondary,
+                fontFamily:
+                  profile.bio.length > 40 ? FONT_CSS.inter : undefined,
               }}
             >
-              {monthLabels.map((label, wi) => (
-                <span
-                  key={`m-${wi}`}
-                  aria-hidden
-                  className="h-4 overflow-visible whitespace-nowrap text-[10px] capitalize leading-none"
-                  style={{ gridRow: 1, gridColumn: wi + 1, color: textMuted }}
-                >
-                  {label}
+              {profile.bio}
+            </p>
+          )}
+
+          <div className="animate-card-rise [--i:3] mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div
+              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[14px]"
+              style={{ color: textSecondary }}
+            >
+              <span className="flex items-center gap-1.5">
+                <AtSign className="size-4 shrink-0" strokeWidth={1.75} />
+                {profile.username}
+              </span>
+              {profile.location && (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <MapPin className="size-4 shrink-0" strokeWidth={1.75} />
+                  <span className="truncate">{profile.location}</span>
                 </span>
-              ))}
-              {heatmapWeeks.flatMap((week, wi) =>
-                Array.from({ length: 7 }, (_, di) => {
-                  const day = week[di] ?? null;
-                  return (
-                    <span
-                      key={`${wi}-${di}`}
-                      aria-hidden
-                      title={
-                        day
-                          ? `${day.count} contribuciones · ${formatDay(day.date)}`
-                          : undefined
-                      }
-                      className="aspect-square w-full rounded-[3px]"
-                      style={{
-                        gridRow: di + 2,
-                        gridColumn: wi + 1,
-                        background: day ? heatColor(day.level) : "transparent",
-                        boxShadow:
-                          day && day.level > 0
-                            ? "inset 0 0 0 1px rgba(255,255,255,0.06)"
-                            : undefined,
-                      }}
-                    />
-                  );
-                }),
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-[11px]" style={{ color: textMuted }}>
-                {formatCount(githubStats.totalContributions)} en el último año
-              </span>
-              <div className="flex items-center gap-1" aria-hidden>
-                <span className="mr-1 text-[10px]" style={{ color: textMuted }}>
-                  Menos
-                </span>
-                {HEATMAP_MIX.map((_, level) => (
-                  <span
-                    key={level}
-                    className="size-2.5 rounded-[2px]"
-                    style={{ background: heatColor(level) }}
-                  />
-                ))}
-                <span className="ml-1 text-[10px]" style={{ color: textMuted }}>
-                  Más
+            {stackLanguages.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {stackLanguages.map((l) => (
+                    <Image
+                      key={l.language}
+                      src={l.icon!}
+                      alt={l.language}
+                      title={`${l.language} · ${l.pct}%`}
+                      width={22}
+                      height={22}
+                      unoptimized
+                      className="size-[22px] object-contain"
+                    />
+                  ))}
+                </div>
+                <span
+                  className="text-[14px] font-medium"
+                  style={{ color: textPrimary }}
+                >
+                  Stack
                 </span>
               </div>
-            </div>
-          </section>
-        )}
+            )}
+          </div>
 
-        {hasProjects && (
-          <>
-            <div className="my-5 h-px" style={{ background: dividerColor }} />
-            <h2
-              className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
-              style={{ color: textMuted }}
-            >
-              Proyectos destacados
-            </h2>
-            <ul className="flex flex-col">
-              {projects.map((project, i) => (
-                <motion.li
-                  key={project.id}
-                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.2,
-                    delay: i * 0.05,
-                    ease: "easeOut",
-                  }}
-                  style={i > 0 ? { borderTop: `1px solid ${dividerColor}` } : undefined}
+          {iconLinks.length > 0 && (
+            <div className="animate-card-rise [--i:4] mt-4 flex flex-wrap gap-2">
+              {iconLinks.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.title}
+                  aria-label={`${link.title} (abre en una pestaña nueva)`}
+                  onClick={
+                    link.id === GITHUB_LINK_ID
+                      ? undefined
+                      : () => trackClick(link.id)
+                  }
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full outline-none transition-[scale,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:opacity-80 focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.96] motion-reduce:active:scale-100"
+                  style={
+                    {
+                      background: surfaceSubtle,
+                      "--row-ring": profile.accentColor,
+                    } as React.CSSProperties
+                  }
                 >
-                  <a
-                    href={project.url ?? undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-3 outline-none transition-[background-color,scale] duration-150 ease-out hover:bg-[var(--row-hover)] focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.99] motion-reduce:active:scale-100"
-                    style={
-                      {
-                        "--row-hover": surfaceSubtle,
-                        "--row-ring": profile.accentColor,
-                      } as React.CSSProperties
-                    }
+                  <Image
+                    src={iconUrl(link.icon ?? "link", profile.accentColor)}
+                    alt=""
+                    width={20}
+                    height={20}
+                    unoptimized
+                    className="size-5 object-contain"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+
+          {statsItems.length > 0 && (
+            <dl className="mt-5 flex items-stretch">
+              {statsItems.map(({ label, value, Icon, iconColor }, i) => (
+                <div
+                  key={label}
+                  className="animate-card-rise flex flex-col items-center gap-1.5 px-4 first:pl-0"
+                  style={
+                    {
+                      "--i": i,
+                      ...(i > 0 && {
+                        borderLeft: `1px solid ${dividerColor}`,
+                      }),
+                    } as React.CSSProperties
+                  }
+                >
+                  <dd className="flex items-center gap-1.5">
+                    <Icon
+                      aria-hidden="true"
+                      className="size-5"
+                      strokeWidth={2.25}
+                      style={{ color: iconColor }}
+                    />
+                    <span
+                      className="text-[22px] font-semibold tabular-nums leading-none"
+                      style={{ color: textPrimary }}
+                    >
+                      {value}
+                    </span>
+                  </dd>
+                  <dt
+                    className="text-[14px] leading-tight"
+                    style={{ color: textMuted }}
                   >
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className="block truncate text-[13px] font-medium leading-tight"
-                        style={{ color: textPrimary }}
+                    {label}
+                  </dt>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "relative z-10 px-6 pb-8",
+          w("lg:grid lg:grid-cols-2 lg:gap-x-12 lg:px-12 lg:pb-10"),
+        )}
+      >
+        {hasLeftCol && (
+          <div className={fullCol}>
+            {heatmapColumns.length > 0 && githubStats && (
+              <section aria-label="Actividad en GitHub">
+                <div
+                  className="my-5 h-px"
+                  style={{ background: dividerColor }}
+                />
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <h2
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                    style={{ color: textMuted }}
+                  >
+                    Actividad
+                  </h2>
+                  <span
+                    className="text-[11px] tabular-nums"
+                    style={{ color: textMuted }}
+                    suppressHydrationWarning
+                  >
+                    <span style={{ color: textPrimary }}>
+                      {formatCount(periodContributions)}
+                    </span>{" "}
+                    contribuciones · {timeAgo(githubStats.fetchedAt)}
+                  </span>
+                </div>
+
+                <div
+                  role="img"
+                  aria-label={`${periodContributions} contribuciones en los últimos ${HEATMAP_WEEKS * 7} días`}
+                  style={
+                    {
+                      "--chart-label": textMuted,
+                      "--chart-tooltip-background": isLight
+                        ? "#ffffff"
+                        : "#18181b",
+                      "--chart-tooltip-foreground": isLight
+                        ? "#0a0a0a"
+                        : "#fafafa",
+                      "--chart-tooltip-muted": isLight ? "#52525b" : "#a1a1aa",
+                    } as React.CSSProperties
+                  }
+                >
+                  <HeatmapInteractionProvider>
+                    <HeatmapInteractionBoundary>
+                      <HeatmapChart
+                        data={heatmapColumns}
+                        layout="fluid"
+                        gap={3}
+                        margin={HEATMAP_MARGIN}
+                        levelStyles={heatLevelStyles}
+                        animate={!reduceMotion}
                       >
-                        {project.title || project.githubRepo}
-                      </span>
-                      {project.description && (
+                        <HeatmapSeparator
+                          groupBy="quarter"
+                          stroke={dividerColor}
+                        />
+                        <HeatmapCells cornerRadius={999} />
+                        <HeatmapXAxis className="capitalize" />
+                        <HeatmapYAxis labelFormat="initial" />
+                        <HeatmapTooltip
+                          formatLabel={(_, date) =>
+                            formatContributionLabel(
+                              dayCounts.get(date.getTime()) ?? 0,
+                            )
+                          }
+                        />
+                      </HeatmapChart>
+                      <div className="mt-2 flex items-center justify-between gap-3">
                         <span
-                          className="mt-1 block truncate text-[11px] leading-snug"
+                          className="whitespace-nowrap text-[11px]"
                           style={{ color: textMuted }}
                         >
-                          {project.description}
+                          {formatCount(githubStats.totalContributions)} en el
+                          último año
                         </span>
-                      )}
-                    </span>
-
-                    {project.language && (
-                      <span
-                        className="flex shrink-0 items-center gap-1.5 text-[11px]"
-                        style={{ color: textMuted }}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="block size-1.5 rounded-full"
-                          style={{
-                            background:
-                              LANG_COLOR[project.language] ??
-                              profile.accentColor,
-                          }}
+                        <HeatmapLegend
+                          cornerRadius={999}
+                          cellSize={10}
+                          gap={3}
+                          levelStyles={heatLevelStyles}
+                          lessLabel="Menos"
+                          moreLabel="Más"
+                          labelClassName="text-chart-label"
                         />
-                        {project.language}
-                      </span>
-                    )}
-                    {project.stars > 0 && (
-                      <span
-                        className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums"
-                        style={{ color: textMuted }}
+                      </div>
+                    </HeatmapInteractionBoundary>
+                  </HeatmapInteractionProvider>
+                </div>
+              </section>
+            )}
+
+            {hasProjects && (
+              <>
+                <div
+                  className="my-5 h-px"
+                  style={{ background: dividerColor }}
+                />
+                <h2
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
+                  style={{ color: textMuted }}
+                >
+                  Proyectos destacados
+                </h2>
+                <ul className="flex flex-col">
+                  {projects.map((project, i) => (
+                    <motion.li
+                      key={project.id}
+                      initial={
+                        reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.2,
+                        delay: i * 0.05,
+                        ease: EASE_OUT,
+                      }}
+                      style={
+                        i > 0
+                          ? { borderTop: `1px solid ${dividerColor}` }
+                          : undefined
+                      }
+                    >
+                      <a
+                        href={project.url ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-3 outline-none transition-[background-color,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[var(--row-hover)] focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.99] motion-reduce:active:scale-100"
+                        style={
+                          {
+                            "--row-hover": surfaceSubtle,
+                            "--row-ring": profile.accentColor,
+                          } as React.CSSProperties
+                        }
                       >
-                        <Star aria-hidden="true" className="size-3 fill-current" />
-                        <span className="sr-only">Stars:</span>
-                        {project.stars >= 1000
-                          ? `${(project.stars / 1000).toFixed(1)}k`
-                          : project.stars}
-                      </span>
-                    )}
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className="size-4 shrink-0 opacity-30 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
-                      style={{ color: textPrimary }}
-                    />
-                  </a>
-                </motion.li>
-              ))}
-            </ul>
-          </>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block truncate text-[13px] font-medium leading-tight"
+                            style={{ color: textPrimary }}
+                          >
+                            {project.title || project.githubRepo}
+                          </span>
+                          {project.description && (
+                            <span
+                              className="mt-1 block truncate text-[11px] leading-snug"
+                              style={{ color: textMuted }}
+                            >
+                              {project.description}
+                            </span>
+                          )}
+                        </span>
+
+                        {project.language && (
+                          <span
+                            className="flex shrink-0 items-center gap-1.5 text-[11px]"
+                            style={{ color: textMuted }}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="block size-1.5 rounded-full"
+                              style={{
+                                background:
+                                  LANG_COLOR[project.language] ??
+                                  profile.accentColor,
+                              }}
+                            />
+                            {project.language}
+                          </span>
+                        )}
+                        {project.stars > 0 && (
+                          <span
+                            className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums"
+                            style={{ color: textMuted }}
+                          >
+                            <Star
+                              aria-hidden="true"
+                              className="size-3 fill-current"
+                            />
+                            <span className="sr-only">Stars:</span>
+                            {project.stars >= 1000
+                              ? `${(project.stars / 1000).toFixed(1)}k`
+                              : project.stars}
+                          </span>
+                        )}
+                        <ArrowUpRight
+                          aria-hidden="true"
+                          className="size-4 shrink-0 opacity-30 transition-[opacity,translate] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                          style={{ color: textPrimary }}
+                        />
+                      </a>
+                    </motion.li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         )}
 
         {secondaryLinks.length > 0 && (
-          <>
+          <div className={fullCol}>
             <div className="my-5 h-px" style={{ background: dividerColor }} />
             <h2
               className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
-              style={{ color: textMuted }}
+              style={{ color: textSecondary }}
             >
               Links
             </h2>
             <div className="flex flex-col gap-2">
               {secondaryLinks.map((link, i) => {
-                const isFeatured =
-                  link.layout === "featured" && link.previewImage;
-                const featuredText = isFeatured ? textPrimary : linkText;
+                const preview = failedPreviews.has(link.id)
+                  ? null
+                  : link.previewImage;
+                const isFeatured = link.layout === "featured" && !!preview;
+                const featuredText = isFeatured ? "#ffffff" : linkText;
                 const host = displayHost(link.url);
+                const linkIcon = link.icon || iconFromUrl(link.url);
                 return (
                   <motion.a
                     key={link.id}
@@ -777,59 +822,94 @@ export function PublicProfileCard({
                     onClick={() => trackClick(link.id)}
                     className={cn(
                       "group flex w-full overflow-hidden [-webkit-tap-highlight-color:transparent]",
-                      isFeatured ? "flex-col" : "min-h-[60px] items-center",
+                      isFeatured
+                        ? "relative flex-col"
+                        : "min-h-[60px] items-center",
                     )}
                     style={{
                       borderRadius: isFeatured ? featuredRadius : bRadius,
                       ...(isFeatured
                         ? {
                             border: `1px solid ${bColor}35`,
-                            background: `${bColor}08`,
+                            background: `${bColor}14`,
                           }
                         : linkStyle),
                     }}
-                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.2,
-                      delay: i * 0.05,
-                      ease: "easeOut",
+                    initial={
+                      reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }
+                    }
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.2,
+                        delay: i * 0.05,
+                        ease: EASE_OUT,
+                      },
                     }}
-                    whileHover={reduceMotion ? undefined : { y: -2, boxShadow: `0 10px 28px -10px ${bColor}99` }}
-                    whileTap={{ scale: 0.96 }}
+                    whileHover={
+                      reduceMotion
+                        ? undefined
+                        : { y: -2, boxShadow: `0 10px 28px -10px ${bColor}99` }
+                    }
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: EASE_OUT }}
                   >
                     {isFeatured && (
                       <Image
-                        src={link.previewImage!}
+                        src={preview!}
                         alt=""
                         width={480}
-                        height={140}
-                        className="h-[140px] w-full object-cover"
+                        height={251}
+                        className="aspect-[1.91/1] w-full object-cover transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-safe:group-hover:scale-[1.03]"
                         unoptimized
+                        onError={() =>
+                          setFailedPreviews((prev) =>
+                            new Set(prev).add(link.id),
+                          )
+                        }
                       />
                     )}
-                    <div className="flex w-full items-center gap-3 py-2 pl-2 pr-4">
+                    <div
+                      className={cn(
+                        "flex w-full items-center gap-3 py-2 pl-2 pr-4",
+                        isFeatured && "absolute inset-x-0 bottom-0 pt-12",
+                      )}
+                      style={
+                        isFeatured
+                          ? {
+                              background:
+                                "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 55%, transparent 100%)",
+                            }
+                          : undefined
+                      }
+                    >
                       <span
                         className="flex size-10 shrink-0 items-center justify-center overflow-hidden"
                         style={{
                           borderRadius: iconTileRadius,
-                          background: `color-mix(in srgb, ${featuredText} 12%, transparent)`,
+                          background: `color-mix(in srgb, ${featuredText} ${isFeatured ? 18 : 12}%, transparent)`,
                         }}
                       >
-                        {!isFeatured && link.previewImage ? (
+                        {!isFeatured && preview ? (
                           <Image
-                            src={link.previewImage}
+                            src={preview}
                             alt=""
                             width={40}
                             height={40}
                             unoptimized
+                            onError={() =>
+                              setFailedPreviews((prev) =>
+                                new Set(prev).add(link.id),
+                              )
+                            }
                             className="size-full object-cover"
                           />
-                        ) : link.icon ? (
+                        ) : linkIcon ? (
                           <Image
                             src={iconUrl(
-                              link.icon,
-                              isFeatured ? profile.accentColor : linkIconColor,
+                              linkIcon,
+                              isFeatured ? "#ffffff" : linkIconColor,
                             )}
                             alt=""
                             width={18}
@@ -855,7 +935,11 @@ export function PublicProfileCard({
                         {host && (
                           <span
                             className="block truncate text-[11px] leading-snug"
-                            style={{ color: isFeatured ? textSecondary : linkMuted }}
+                            style={{
+                              color: isFeatured
+                                ? "rgba(255,255,255,0.72)"
+                                : linkMuted,
+                            }}
                           >
                             {host}
                           </span>
@@ -863,7 +947,7 @@ export function PublicProfileCard({
                       </span>
                       <ArrowUpRight
                         aria-hidden
-                        className="size-4 shrink-0 opacity-50 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                        className="size-4 shrink-0 opacity-70 transition-[opacity,translate] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
                         strokeWidth={2}
                         style={{ color: featuredText }}
                       />
@@ -872,10 +956,10 @@ export function PublicProfileCard({
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
-        <div className="mt-10 text-center">
+        <div className={cn("mt-10 text-center", w("lg:col-span-2"))}>
           <span
             className="text-[10px] uppercase tracking-[0.08em]"
             style={{ color: textMuted }}
@@ -893,90 +977,14 @@ export function PublicProfileCard({
         </div>
       </div>
 
-      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
-        <DialogContent className="gap-6 sm:max-w-sm">
-          <DialogTitle className="sr-only">Compartir perfil</DialogTitle>
-
-          <div className="flex flex-col items-center gap-5">
-            <p className="text-base font-semibold text-foreground">
-              Compartir perfil
-            </p>
-
-            <div
-              className="flex w-full flex-col items-center gap-4 rounded-[24px] p-8"
-              style={{
-                background: cardBg,
-                border: `1px solid ${profile.accentColor}20`,
-              }}
-            >
-              <div
-                className="size-[88px] overflow-hidden rounded-full"
-                style={{
-                  background: profile.avatarUrl
-                    ? "transparent"
-                    : `${profile.accentColor}25`,
-                  boxShadow: `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}80, 0 6px 28px ${profile.accentColor}55`,
-                }}
-              >
-                {profile.avatarUrl ? (
-                  <Image
-                    src={profile.avatarUrl}
-                    alt={profile.displayName}
-                    width={88}
-                    height={88}
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <span
-                      className="text-lg font-bold"
-                      style={{ color: textPrimary }}
-                    >
-                      {profile.displayName.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col items-center gap-1">
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: textPrimary }}
-                >
-                  {profile.displayName}
-                </span>
-                <span
-                  className="flex items-center gap-1 text-sm"
-                  style={{ color: `${profile.accentColor}cc` }}
-                >
-                  <Image
-                    src="/logo.svg"
-                    alt="DevLinks"
-                    width={14}
-                    height={14}
-                    className="inline-block"
-                  />
-                  /{profile.username}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm cursor-pointer font-medium text-white transition-[scale,opacity] duration-150 ease-out hover:opacity-90 active:scale-[0.96]"
-              style={{ background: profile.accentColor }}
-            >
-              {copied ? (
-                <Check className="size-4" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-              {copied ? "Link copiado" : "Copiar link"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ShareProfileDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        profile={profile}
+        publicUrl={publicUrl}
+        cardBg={cardBg}
+        textPrimary={textPrimary}
+      />
 
       {stickers.length > 0 && (
         <div
@@ -988,7 +996,7 @@ export function PublicProfileCard({
             const size = Math.round(STICKER_BASE_SIZE * (sticker.scale ?? 1));
             const isFloating = Boolean(sticker.animated) && !reduceMotion;
             return (
-              <motion.div
+              <div
                 key={`${sticker.id}-${idx}`}
                 className="absolute"
                 style={{
@@ -996,28 +1004,27 @@ export function PublicProfileCard({
                   top: `${sticker.y}%`,
                   marginLeft: -size / 2,
                   marginTop: -size / 2,
-                  rotate: sticker.rotation,
+                  rotate: `${sticker.rotation ?? 0}deg`,
                 }}
-                animate={isFloating ? { y: [0, -7, 0] } : undefined}
-                transition={
-                  isFloating
-                    ? {
-                        duration: 2.6 + (idx % 3) * 0.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: (idx % 4) * 0.25,
-                      }
-                    : undefined
-                }
               >
-                <StickerTile
-                  slug={sticker.id}
-                  color={stickerColor(sticker.id, profile.accentColor)}
-                  size={size}
-                  live={isFloating}
-                  delay={(idx % 4) * 0.8}
-                />
-              </motion.div>
+                <div
+                  style={
+                    isFloating
+                      ? {
+                          animation: `sticker-float ${2.6 + (idx % 3) * 0.5}s ease-in-out ${(idx % 4) * 0.25}s infinite`,
+                        }
+                      : undefined
+                  }
+                >
+                  <StickerTile
+                    slug={sticker.id}
+                    color={stickerColor(sticker.id, profile.accentColor)}
+                    size={size}
+                    live={isFloating}
+                    delay={(idx % 4) * 0.8}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>

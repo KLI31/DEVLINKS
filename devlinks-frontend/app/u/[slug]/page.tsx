@@ -21,9 +21,7 @@ const getCachedPublicProfile = cache((slug: string, clientIp: string) =>
 async function getClientIp(): Promise<string> {
   const h = await headers();
   return (
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    h.get("x-real-ip") ??
-    ""
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? ""
   );
 }
 
@@ -77,7 +75,9 @@ export default async function PublicProfilePage({
   const profile = await getCachedPublicProfile(slug, clientIp);
   if (!profile) notFound();
 
-  const projects = await userApi.getPublicProjects(slug).catch(() => [] as Project[]);
+  const projects = await userApi
+    .getPublicProjects(slug)
+    .catch(() => [] as Project[]);
 
   const safeBgColor = isValidHex(profile.bgColor) ? profile.bgColor : "#0f172a";
   const safeAccentColor = isValidHex(profile.accentColor)
@@ -94,10 +94,7 @@ export default async function PublicProfilePage({
       className="flex min-h-screen flex-col items-center justify-start overflow-x-hidden px-4 py-16 scrollbar-hide"
       style={{ background: pageBg }}
     >
-      <PublicProfileCard
-        profile={profile}
-        projects={projects}
-      />
+      <PublicProfileCard profile={profile} projects={projects} wide />
     </main>
   );
 }
