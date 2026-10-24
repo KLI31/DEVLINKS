@@ -24,6 +24,7 @@
   "registries": {
     "@react-bits": "https://reactbits.dev/r/{name}.json",
     "@magicui": "https://magicui.design/r/{name}",
-    "@mapcn": "https://mapcn.dev/r/{name}.json"
+    "@mapcn": "https://mapcn.dev/r/{name}.json",
+    "@bklit": "https://bklit.com/r/{name}.json"
   }
 }

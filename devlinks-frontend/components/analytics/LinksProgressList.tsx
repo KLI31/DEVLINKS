@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Link2, ChevronDown } from "lucide-react";
+import { Panel } from "@/components/dashboard/Panel";
 import type { LinkStat } from "@/types/analytics";
 import { iconUrl } from "@/lib/icons";
 import Image from "next/image";
@@ -41,21 +42,21 @@ export function LinksProgressList({
 
   if (links.length === 0) {
     return (
-      <div className="flex w-full flex-col rounded-xl border border-border/70 bg-card p-5 shadow-(--shadow-card)">
-        <h3 className="font-medium">Rendimiento por link</h3>
+      <Panel className="flex w-full flex-col">
+        <h3 className="text-sm font-medium text-foreground">Rendimiento por link</h3>
         <div className="flex flex-1 items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">
             Ningún link tiene clics aún
           </p>
         </div>
-      </div>
+      </Panel>
     );
   }
 
   return (
-    <div className="w-full rounded-xl border border-border/70 bg-card p-5 shadow-(--shadow-card)">
+    <Panel className="w-full">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-medium">Rendimiento por link</h3>
+        <h3 className="text-sm font-medium text-foreground">Rendimiento por link</h3>
         <span className="text-xs text-muted-foreground">
           {sortedLinks.length} links
         </span>
@@ -87,7 +88,7 @@ export function LinksProgressList({
                 <span className="block truncate text-sm font-medium text-foreground">
                   {link.title}
                 </span>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <motion.div
                     className="h-full rounded-full"
                     style={{ backgroundColor: accentColor }}
@@ -133,6 +134,6 @@ export function LinksProgressList({
           />
         </button>
       )}
-    </div>
+    </Panel>
   );
 }
