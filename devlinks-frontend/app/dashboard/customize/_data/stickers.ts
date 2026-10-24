@@ -7,7 +7,7 @@ export type Sticker = {
 export const PROGRAMMING_STICKERS: Sticker[] = [
   { slug: "react",       label: "React",       brandColor: "#61DAFB" },
   { slug: "typescript",  label: "TypeScript",   brandColor: "#3178C6" },
-  { slug: "nextdotjs",   label: "Next.js",      brandColor: "#D0D0D0" },
+  { slug: "nextdotjs",   label: "Next.js",      brandColor: "#000000" },
   { slug: "vuedotjs",    label: "Vue",          brandColor: "#4FC08D" },
   { slug: "svelte",      label: "Svelte",       brandColor: "#FF3E00" },
   { slug: "nodedotjs",   label: "Node.js",      brandColor: "#5FA04E" },
@@ -28,5 +28,5 @@ export const PROGRAMMING_STICKERS: Sticker[] = [
   { slug: "mongodb",     label: "MongoDB",      brandColor: "#47A248" },
   { slug: "supabase",    label: "Supabase",     brandColor: "#3ECF8E" },
   { slug: "astro",       label: "Astro",        brandColor: "#FF5D01" },
-  { slug: "vercel",      label: "Vercel",       brandColor: "#CCCCCC" },
+  { slug: "vercel",      label: "Vercel",       brandColor: "#000000" },
 ];

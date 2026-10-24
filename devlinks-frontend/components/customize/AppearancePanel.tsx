@@ -41,8 +41,8 @@ export function AppearancePanel({
 
   if (!section) {
     return (
-      <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
-        <CustomizeMenu onSelect={(id) => setSection(id)} />
+      <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
+        <CustomizeMenu values={values} onSelect={(id) => setSection(id)} />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function AppearancePanel({
   switch (section) {
     case "profile":
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
           <ProfileSection
             values={values}
             update={update}
@@ -64,19 +64,19 @@ export function AppearancePanel({
       );
     case "text":
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
           <TextSection values={values} update={update} onBack={backToMenu} />
         </div>
       );
     case "buttons":
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
           <ButtonsSection values={values} update={update} onBack={backToMenu} />
         </div>
       );
     case "wallpaper":
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
           <WallpaperSection
             values={values}
             update={update}
@@ -86,7 +86,7 @@ export function AppearancePanel({
       );
     case "repos":
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
           <div className="mb-3 flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -108,8 +108,8 @@ export function AppearancePanel({
       return null;
     default:
       return (
-        <div className="flex h-full min-h-0 w-[272px] shrink-0 flex-col overflow-hidden">
-          <CustomizeMenu onSelect={(id) => setSection(id)} />
+        <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
+          <CustomizeMenu values={values} onSelect={(id) => setSection(id)} />
         </div>
       );
   }

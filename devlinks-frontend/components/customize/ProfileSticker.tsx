@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { X } from "lucide-react";
-import { iconUrl } from "@/lib/icons";
 import type { PlacedSticker } from "@/types";
-import Image from "next/image";
-
-const BASE_SIZE = 56;
+import { cn } from "@/lib/utils";
+import {
+  StickerTile,
+  STICKER_BASE_SIZE,
+  STICKER_BOUNDS,
+  STICKER_SCALE,
+  clampSticker,
+} from "@/components/profile/StickerTile";
 
 interface ProfileStickerProps {
   sticker: PlacedSticker;
@@ -18,11 +22,13 @@ interface ProfileStickerProps {
   onSelect: (index: number) => void;
   onUpdate: (index: number, updated: PlacedSticker) => void;
   onRemove: (index: number) => void;
-  mode?: "preview" | "stickers";
 }
 
+const clamp = (v: number, [min, max]: readonly [number, number]) =>
+  Math.round(Math.max(min, Math.min(max, v)) * 10) / 10;
+
 export function ProfileSticker({
-  sticker,
+  sticker: raw,
   index,
   brandColor,
   containerRef,
@@ -30,191 +36,144 @@ export function ProfileSticker({
   onSelect,
   onUpdate,
   onRemove,
-  mode = "preview",
 }: ProfileStickerProps) {
+  const reduceMotion = useReducedMotion();
+  const sticker = clampSticker(raw);
   const [isRemoving, setIsRemoving] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{
-    offsetX: number;
-    offsetY: number;
-  }>({
-    offsetX: 0,
-    offsetY: 0,
-  });
-  const scaleRef = useRef<{ isResizing: boolean }>({ isResizing: false });
+  const isResizing = useRef(false);
 
   const scale = sticker.scale ?? 1;
-  const size = BASE_SIZE * scale;
+  const size = Math.round(STICKER_BASE_SIZE * scale);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    const el = e.currentTarget as HTMLDivElement;
-    el.setPointerCapture(e.pointerId);
-    setIsDragging(true);
-    dragRef.current.offsetX = e.clientX;
-    dragRef.current.offsetY = e.clientY;
-    onSelect(index);
-  }, [onSelect, index]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+      onSelect(index);
+    },
+    [onSelect, index],
+  );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging) return;
       const container = containerRef.current;
       if (!container) return;
-
       const rect = container.getBoundingClientRect();
-      const clientX = e.clientX;
-      const clientY = e.clientY;
-
-      const x = ((clientX - rect.left) / rect.width) * 100;
-      const y = ((clientY - rect.top) / rect.height) * 100;
-
-      const min = mode === "stickers" ? -200 : 2;
-      const max = mode === "stickers" ? 300 : 98;
       onUpdate(index, {
         ...sticker,
-        x: Math.round(Math.max(min, Math.min(max, x)) * 10) / 10,
-        y: Math.round(Math.max(min, Math.min(max, y)) * 10) / 10,
+        x: clamp(((e.clientX - rect.left) / rect.width) * 100, STICKER_BOUNDS.x),
+        y: clamp(((e.clientY - rect.top) / rect.height) * 100, STICKER_BOUNDS.y),
       });
-
-      dragRef.current.offsetX = clientX;
-      dragRef.current.offsetY = clientY;
     },
-    [containerRef, onUpdate, sticker, index, isDragging, mode],
+    [containerRef, onUpdate, sticker, index, isDragging],
   );
-
-  const handlePointerUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
 
   const handleScalePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
-    const el = e.currentTarget as HTMLElement;
-    el.setPointerCapture(e.pointerId);
-    scaleRef.current.isResizing = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isResizing.current = true;
   }, []);
 
   const handleScalePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!scaleRef.current.isResizing) return;
+      if (!isResizing.current) return;
       const container = containerRef.current;
       if (!container) return;
-
       const rect = container.getBoundingClientRect();
       const centerX = rect.left + (sticker.x / 100) * rect.width;
       const centerY = rect.top + (sticker.y / 100) * rect.height;
-
-      const dist = Math.sqrt((e.clientX - centerX) ** 2 + (e.clientY - centerY) ** 2);
-      const newScale = Math.round(Math.max(0.5, Math.min(3, dist / (BASE_SIZE / 2))) * 100) / 100;
-
-      onUpdate(index, { ...sticker, scale: newScale });
+      const dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+      const next = dist / (STICKER_BASE_SIZE / Math.SQRT2);
+      onUpdate(index, {
+        ...sticker,
+        scale: Math.round(
+          Math.max(STICKER_SCALE.min, Math.min(STICKER_SCALE.max, next)) * 100,
+        ) / 100,
+      });
     },
     [containerRef, sticker, onUpdate, index],
   );
 
-  const handleScalePointerUp = useCallback(() => {
-    scaleRef.current.isResizing = false;
-  }, []);
-
   const handleRemove = useCallback(() => {
     setIsRemoving(true);
-    setTimeout(() => {
-      onRemove(index);
-    }, 200);
+    setTimeout(() => onRemove(index), 150);
   }, [onRemove, index]);
 
   return (
     <motion.div
-      initial={{ scale: 0, rotate: -20, opacity: 0 }}
+      initial={reduceMotion ? { opacity: 0 } : { scale: 0.6, opacity: 0 }}
       animate={
         isRemoving
-          ? { scale: 0, opacity: 0 }
-          : { scale: 1, rotate: sticker.rotation, opacity: 1 }
+          ? reduceMotion
+            ? { opacity: 0 }
+            : { scale: 0.6, opacity: 0 }
+          : { scale: isDragging && !reduceMotion ? 1.06 : 1, opacity: 1 }
       }
       transition={
         isRemoving
-          ? { duration: 0.2 }
-          : { type: "spring", stiffness: 260, damping: 20 }
+          ? { duration: 0.15, ease: "easeOut" }
+          : { type: "spring", duration: 0.3, bounce: 0 }
       }
       data-sticker
-      className="absolute pointer-events-auto"
+      className="group pointer-events-auto absolute touch-none"
       style={{
         left: `${sticker.x}%`,
         top: `${sticker.y}%`,
-        width: size,
-        height: size,
         marginLeft: -(size / 2),
         marginTop: -(size / 2),
-        zIndex: 10,
-        cursor: isDragging ? "grabbing" : "move",
+        rotate: sticker.rotation,
+        zIndex: isSelected ? 30 : 10,
+        cursor: isDragging ? "grabbing" : "grab",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onPointerUp={() => setIsDragging(false)}
     >
-      <div
-        className="absolute rounded-xl bg-white transition-shadow duration-200"
-        style={{
-          inset: -6,
-          zIndex: -1,
-          boxShadow: isSelected
-            ? `0 0 0 2px ${brandColor}, 0 6px 20px rgba(0,0,0,0.35)`
-            : isHovered
-              ? "0 6px 20px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)"
-              : "0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15)",
+      <StickerTile
+        slug={sticker.id}
+        color={brandColor}
+        size={size}
+        lifted={isDragging}
+        className={cn(
+          "outline-offset-4",
+          isSelected
+            ? "outline-2 outline-primary"
+            : "outline-0 outline-transparent",
+        )}
+      />
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleRemove();
         }}
-      />
-
-      <Image
-        src={iconUrl(sticker.id, brandColor)}
-        alt={sticker.id}
-        width={BASE_SIZE}
-        unoptimized
-        height={BASE_SIZE}
-        className="size-full object-contain"
-        draggable={false}
-      />
-
-      <AnimatePresence>
-        {isHovered && !isRemoving && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.6 }}
-            transition={{ duration: 0.15 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemove();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="absolute -right-1.5 -top-1.5 flex size-[18px] items-center justify-center rounded-full bg-[#ff4444] text-white shadow-md"
-            style={{ zIndex: 20 }}
-            type="button"
-            aria-label="Eliminar sticker"
-          >
-            <X className="size-2.5" strokeWidth={3} />
-          </motion.button>
+        onPointerDown={(e) => e.stopPropagation()}
+        className={cn(
+          "absolute -right-3 -top-3 flex size-6 cursor-pointer items-center justify-center rounded-full bg-foreground text-background shadow-[0_1px_2px_rgba(0,0,0,0.2),0_4px_8px_rgba(0,0,0,0.2)] transition-[opacity,scale] duration-150 ease-out hover:bg-destructive hover:text-white active:scale-[0.96]",
+          isSelected
+            ? "opacity-100"
+            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
         )}
-      </AnimatePresence>
+        aria-label="Eliminar sticker"
+      >
+        <X className="size-3.5" strokeWidth={2.5} />
+      </button>
 
-      <AnimatePresence>
-        {isSelected && !isRemoving && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.6 }}
-            transition={{ duration: 0.15 }}
-            className="absolute -bottom-2.5 -right-2.5 size-[18px] cursor-nwse-resize rounded-full border-2 border-white shadow-md"
-            style={{ background: brandColor, zIndex: 20 }}
-            onPointerDown={handleScalePointerDown}
-            onPointerMove={handleScalePointerMove}
-            onPointerUp={handleScalePointerUp}
-          />
-        )}
-      </AnimatePresence>
+      {isSelected && (
+        <div
+          role="presentation"
+          className="absolute -bottom-3 -right-3 size-6 cursor-nwse-resize touch-none rounded-full border-2 border-white bg-primary shadow-[0_1px_2px_rgba(0,0,0,0.2),0_4px_8px_rgba(0,0,0,0.2)]"
+          onPointerDown={handleScalePointerDown}
+          onPointerMove={handleScalePointerMove}
+          onPointerUp={() => {
+            isResizing.current = false;
+          }}
+        />
+      )}
     </motion.div>
   );
 }

@@ -16,11 +16,11 @@ export function ToggleField({
   onCheckedChange,
 }: ToggleFieldProps) {
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-border/50 p-3">
       <div className="flex-1">
-        <p className="text-[11px] font-medium text-foreground">{label}</p>
+        <p className="text-[13px] font-semibold text-foreground">{label}</p>
         {description && (
-          <p className="mt-0.5 text-[10px] text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">{description}</p>
         )}
       </div>
       <Switch

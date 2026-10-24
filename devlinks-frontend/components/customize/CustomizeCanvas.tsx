@@ -5,12 +5,12 @@ import { useDroppable } from "@dnd-kit/core";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import type { CustomizeValues, SaveStatus } from "../../hooks/useCustomize";
-import type { PlacedSticker } from "@/types";
+import type { PlacedSticker, PublicProfile } from "@/types";
 import { cn } from "@/lib/utils";
-import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
 import { usePreviewData } from "@/hooks/usePreviewData";
+import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
+import { stickerColor } from "@/components/profile/StickerTile";
 import { ProfileSticker } from "./ProfileSticker";
-import { ProfilePreview } from "./ProfilePreview";
 
 interface CustomizeCanvasProps {
   values: CustomizeValues;
@@ -20,7 +20,7 @@ interface CustomizeCanvasProps {
   mode?: "preview" | "stickers";
 }
 
-function SaveBadge({ status }: { status: SaveStatus }) {
+function SaveBadge({ status, className }: { status: SaveStatus; className?: string }) {
   if (status === "idle") return null;
 
   const map = {
@@ -35,14 +35,15 @@ function SaveBadge({ status }: { status: SaveStatus }) {
 
   return (
     <div
-      className="absolute right-4 top-4 z-10 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium backdrop-blur-sm"
+      className={cn("absolute right-4 top-4 z-10 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium backdrop-blur-sm", className)}
+      role="status"
       style={{ borderColor: map.border, background: map.bg, color: map.color }}
     >
       {status === "saving" && <Loader2 className="size-3 animate-spin" />}
       {status === "saved" && <Check className="size-3" />}
       {status === "error" && <AlertCircle className="size-3" />}
       {status === "saving"
-        ? "Guardando..."
+        ? "Guardando…"
         : status === "saved"
           ? "Guardado"
           : "Error al guardar"}
@@ -57,7 +58,6 @@ export function CustomizeCanvas({
   onUpdateStickers,
   mode = "preview",
 }: CustomizeCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
@@ -110,42 +110,43 @@ export function CustomizeCanvas({
         buttonColor: values.buttonColor,
         buttonTextColor: values.buttonTextColor,
         altTitleFont: values.altTitleFont,
-        stickers: values.stickers,
+        titleFont: values.titleFont,
+        stickers: isStickersMode ? [] : values.stickers,
         links,
         projects,
       }
     : null;
 
-  const stickerList = values.stickers.map((sticker, idx) => {
-    const meta = PROGRAMMING_STICKERS.find((s) => s.slug === sticker.id);
-    return (
-      <ProfileSticker
-        key={`${sticker.id}-${idx}`}
-        sticker={sticker}
-        index={idx}
-        brandColor={meta?.brandColor ?? values.accentColor}
-        containerRef={cardRef as React.RefObject<HTMLDivElement | null>}
-        isSelected={selectedIdx === idx}
-        onSelect={(idx: number) => setSelectedIdx(idx)}
-        onUpdate={handleStickerUpdate}
-        onRemove={handleStickerRemove}
-        mode={mode}
-      />
-    );
-  });
+  const card = profile && (
+    <PublicProfileCard
+      profile={profile as unknown as PublicProfile}
+      projects={projects}
+      githubStats={githubStats}
+      hideShare
+    />
+  );
+
+  const stickerList = values.stickers.map((sticker, idx) => (
+    <ProfileSticker
+      key={`${sticker.id}-${idx}`}
+      sticker={sticker}
+      index={idx}
+      brandColor={stickerColor(sticker.id, values.accentColor)}
+      containerRef={cardRef}
+      isSelected={selectedIdx === idx}
+      onSelect={setSelectedIdx}
+      onUpdate={handleStickerUpdate}
+      onRemove={handleStickerRemove}
+    />
+  ));
 
   return (
     <div
-      ref={(node) => {
-        setDroppableNodeRef(node);
-        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-      }}
+      ref={setDroppableNodeRef}
       id={dropId}
       className={cn(
-        "relative flex min-h-0 flex-1 flex-col rounded-2xl border border-border/40 bg-muted/10",
-        !isStickersMode && "scroll-thin overflow-y-auto p-4",
-        isStickersMode && "scroll-hide overflow-auto",
-        isStickersMode && "bg-[radial-gradient(circle,_color-mix(in_srgb,_currentColor_12%,_transparent)_1px,_transparent_1px)] [background-size:22px_22px]",
+        "relative flex min-h-0 flex-1 flex-col overflow-auto overscroll-contain rounded-2xl border border-border bg-[radial-gradient(circle,_color-mix(in_srgb,_var(--color-foreground)_9%,_transparent)_1px,_transparent_1px)] [background-size:20px_20px] transition-[box-shadow] duration-200 ease-out",
+        isStickersMode ? "scroll-hide" : "scroll-thin",
       )}
       onPointerDown={(e) => {
         if (!(e.target as HTMLElement).closest("[data-sticker]")) {
@@ -154,54 +155,29 @@ export function CustomizeCanvas({
       }}
       style={
         isOver
-          ? {
-              boxShadow: `0 0 0 2px ${values.accentColor}80, 0 8px 32px ${values.accentColor}30`,
-              transition: "box-shadow 200ms ease",
-            }
+          ? { boxShadow: "inset 0 0 0 2px var(--color-primary)" }
           : undefined
       }
     >
-      <SaveBadge status={saveStatus} />
+      <SaveBadge
+        status={saveStatus}
+        className={isStickersMode ? "right-[296px]" : undefined}
+      />
 
       {!isStickersMode ? (
-        <div className="flex min-h-0 justify-center py-4">
-          <div style={{ width: 390, zoom: 0.88 }}>
-            {profile && (
-              <ProfilePreview
-                profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
-                projects={projects}
-                links={links}
-                githubStats={githubStats}
-                layout={values.layout as "classic" | "hero"}
-              />
-            )}
-          </div>
+        <div className="flex justify-center px-6 py-10">
+          <div className="w-full max-w-[420px]">{card}</div>
         </div>
       ) : (
-        // Wide stage so stickers can be placed freely around the card
-        <div
-          className="flex items-start justify-center py-12"
-          style={{ minWidth: "max(100%, 1100px)", minHeight: "100%" }}
-        >
+        <div className="flex min-w-[820px] justify-center py-16 pr-[280px]">
           <div
             ref={cardRef}
             id="stickers-card"
-            className="relative"
-            style={{ zoom: 0.68 }}
+            className="relative w-[480px] shrink-0"
+            style={{ zoom: 0.8 }}
           >
-            {profile && (
-              <ProfilePreview
-                profile={profile as unknown as Parameters<typeof ProfilePreview>[0]["profile"]}
-                projects={projects}
-                links={links}
-                githubStats={githubStats}
-                layout={values.layout as "classic" | "hero"}
-              />
-            )}
-            <div
-              className="pointer-events-none absolute inset-0 z-20"
-              style={{ overflow: "visible" }}
-            >
+            {card}
+            <div className="pointer-events-none absolute inset-0 z-20">
               {stickerList}
             </div>
           </div>

@@ -21,7 +21,7 @@ const MAX_PINNED = 6;
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+    <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
       {children}
     </p>
   );
@@ -293,7 +293,7 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
             return (
               <div
                 key={repo.id}
-                className="group flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 transition-all duration-150 hover:border-border hover:bg-muted/40"
+                className="group flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 transition-[background-color,border-color,color] duration-150 ease-out hover:border-border hover:bg-muted/40"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <RepoLanguageIcon language={repo.language} />
@@ -302,11 +302,11 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
                       {repo.name}
                     </span>
                     {repo.description && (
-                      <p className="line-clamp-1 text-[10px] text-muted-foreground">
+                      <p className="line-clamp-1 text-[11px] text-muted-foreground">
                         {repo.description}
                       </p>
                     )}
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground/80">
+                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground/80">
                       <span className="flex items-center gap-0.5">
                         <Star className="size-2.5" />
                         {repo.stargazers_count}
@@ -319,7 +319,7 @@ export function GitReposPanel({ githubUsername }: GitReposPanelProps) {
                   type="button"
                   onClick={() => toggleRepo(repo)}
                   disabled={saving || atLimit}
-                  className="flex size-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 disabled:opacity-40"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-150 ease-out disabled:opacity-40"
                   style={
                     selected
                       ? {

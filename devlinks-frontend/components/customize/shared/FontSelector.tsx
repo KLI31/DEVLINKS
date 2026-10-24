@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FontOption {
@@ -50,74 +48,52 @@ interface FontSelectorProps {
 }
 
 export function FontSelector({ value, onChange, label }: FontSelectorProps) {
-  const [open, setOpen] = useState(false);
-
-  const selectedFont = FONT_GROUPS.flatMap((g) => g.fonts).find((f) => f.id === value);
-
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-3">
       {label && (
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-[13px] font-semibold text-foreground">{label}</p>
       )}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger>
-          <div
-            className="flex h-9 w-full cursor-pointer items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-3 text-left text-xs transition-colors hover:bg-muted/50"
-            role="button"
-            tabIndex={0}
-          >
-            <span style={{ fontFamily: selectedFont?.css }}>
-              {selectedFont?.label ?? "Seleccionar fuente"}
-            </span>
-            <ChevronDown className="size-3.5 text-muted-foreground" />
+      {FONT_GROUPS.map((group) => (
+        <div key={group.tag} className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            {group.label}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {group.fonts.map((font) => {
+              const active = font.id === value;
+              return (
+                <button
+                  key={font.id}
+                  type="button"
+                  onClick={() => onChange(font.id)}
+                  aria-pressed={active}
+                  className={cn(
+                    "relative flex min-h-16 min-w-0 cursor-pointer flex-col items-start justify-center gap-0.5 rounded-xl border px-3 py-2 text-left outline-none transition-[background-color,border-color,scale] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.97] motion-reduce:active:scale-100",
+                    active
+                      ? "border-primary bg-primary/10 shadow-[0_0_0_1px_var(--color-primary)]"
+                      : "border-border/60 hover:border-foreground/25 hover:bg-muted/30",
+                  )}
+                >
+                  <span
+                    className="text-2xl leading-none text-foreground"
+                    style={{ fontFamily: font.css }}
+                  >
+                    Aa
+                  </span>
+                  <span className="w-full truncate text-[11px] text-muted-foreground">
+                    {font.label}
+                  </span>
+                  {active && (
+                    <span className="absolute right-2 top-2 flex size-4 items-center justify-center rounded-full bg-primary">
+                      <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 p-2" side="bottom" align="start">
-          <div className="scroll-thin max-h-72 space-y-2 overflow-y-auto pr-1">
-            {FONT_GROUPS.map((group) => (
-              <div key={group.tag}>
-                <p className="px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.label}
-                </p>
-                <div className="space-y-0.5">
-                  {group.fonts.map((font) => {
-                    const active = font.id === value;
-                    return (
-                      <button
-                        key={font.id}
-                        type="button"
-                        onClick={() => {
-                          onChange(font.id);
-                          setOpen(false);
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors",
-                          active
-                            ? "bg-primary/10 text-primary"
-                            : "hover:bg-muted/50",
-                        )}
-                      >
-                        <span
-                          className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/40 bg-background text-sm font-medium"
-                          style={{ fontFamily: font.css }}
-                        >
-                          Ag
-                        </span>
-                        <span className="flex-1 text-[11px]" style={{ fontFamily: font.css }}>
-                          {font.label}
-                        </span>
-                        {active && <Check className="size-3.5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      ))}
     </div>
   );
 }

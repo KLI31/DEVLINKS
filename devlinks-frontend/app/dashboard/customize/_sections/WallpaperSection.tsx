@@ -90,9 +90,9 @@ export function WallpaperSection({
   return (
     <div className="flex h-full flex-col">
       <SectionHeader title="Fondo" onBack={onBack} />
-      <div className="scroll-thin flex-1 space-y-5 overflow-y-auto pr-1">
+      <div className="scroll-thin flex-1 space-y-6 overflow-y-auto overscroll-contain pr-1">
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="mb-2 text-[13px] font-semibold text-foreground">
             Temas
           </p>
           <div className="grid grid-cols-4 gap-2">
@@ -108,15 +108,16 @@ export function WallpaperSection({
                   type="button"
                   onClick={() => update(preset.patch)}
                   aria-label={preset.label}
+                  aria-pressed={isActive}
                   className={cn(
-                    "group flex flex-col items-center gap-1 rounded-lg border p-1.5 transition-colors cursor-pointer",
+                    "group flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-1.5 outline-none transition-[border-color,scale] duration-150 focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.97] motion-reduce:active:scale-100",
                     isActive
                       ? "border-primary ring-1 ring-primary"
                       : "border-border/40 hover:border-border",
                   )}
                 >
                   <span
-                    className="relative h-9 w-full overflow-hidden rounded-md"
+                    className="relative h-16 w-full overflow-hidden rounded-md ring-1 ring-black/10"
                     style={{
                       background:
                         preset.patch.bgType === "gradient"
@@ -124,12 +125,13 @@ export function WallpaperSection({
                           : presetBg,
                     }}
                   >
-                    <span
-                      className="absolute bottom-1 right-1 size-2.5 rounded-full ring-1 ring-black/20"
-                      style={{ background: presetAccent }}
-                    />
+                    <span className="absolute inset-x-2 top-2 flex flex-col items-center gap-1">
+                      <span className="size-3 rounded-full" style={{ background: presetAccent }} />
+                      <span className="h-1.5 w-full rounded-full" style={{ background: presetAccent, opacity: 0.85 }} />
+                      <span className="h-1.5 w-full rounded-full" style={{ background: presetAccent, opacity: 0.35 }} />
+                    </span>
                   </span>
-                  <span className="text-[10px] text-muted-foreground group-hover:text-foreground">
+                  <span className="w-full truncate text-[11px] text-muted-foreground group-hover:text-foreground">
                     {preset.label}
                   </span>
                 </button>
@@ -139,7 +141,7 @@ export function WallpaperSection({
         </div>
 
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="mb-2 text-[13px] font-semibold text-foreground">
             Estilo de fondo
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -153,7 +155,7 @@ export function WallpaperSection({
                   onClick={() => update({ bgType: w.id })}
                   preview={
                     <div
-                      className="h-10 w-full rounded-md border border-border/30"
+                      className="h-12 w-full rounded-md border border-white/10"
                       style={
                         w.id === "fill"
                           ? { background: bgColor }

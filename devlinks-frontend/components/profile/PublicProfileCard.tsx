@@ -6,15 +6,16 @@ import Image from "next/image";
 import {
   MapPin,
   Star,
-  ChevronRight,
-  ExternalLink,
+  ArrowUpRight,
+  Link2,
   Code2,
   Users,
-  UserCheck,
+  AtSign,
   Share2,
   Copy,
   Check,
 } from "lucide-react";
+import { getDevIconUrl } from "@/lib/api/github.api";
 import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import type {
@@ -24,8 +25,12 @@ import type {
   GithubStats,
 } from "@/types";
 import { iconUrl } from "@/lib/icons";
-
-import { PROGRAMMING_STICKERS } from "@/app/dashboard/customize/_data/stickers";
+import {
+  StickerTile,
+  STICKER_BASE_SIZE,
+  clampSticker,
+  stickerColor,
+} from "@/components/profile/StickerTile";
 import { getProfileUrl } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -63,18 +68,38 @@ const LANG_COLOR: Record<string, string> = {
   Kotlin: "#A97BFF",
 };
 
-const HEATMAP_ALPHA = ["0d", "2a", "55", "88", "cc"] as const;
+const HEATMAP_MIX = [0, 30, 55, 80, 100] as const;
+const HEATMAP_WEEKS = 26;
 
-const PROJECT_TITLE_COLORS = [
-  "#60a5fa", // blue-400
-  "#34d399", // emerald-400
-  "#a78bfa", // violet-400
-  "#f472b6", // pink-400
-  "#fb923c", // orange-400
-  "#22d3ee", // cyan-400
-  "#4ade80", // green-400
-  "#e879f9", // fuchsia-400
-] as const;
+const RELATIVE_TIME = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+
+function timeAgo(ts: number): string {
+  const mins = Math.round((ts - Date.now()) / 60_000);
+  if (Math.abs(mins) < 60) return RELATIVE_TIME.format(mins, "minute");
+  const hours = Math.round(mins / 60);
+  if (Math.abs(hours) < 24) return RELATIVE_TIME.format(hours, "hour");
+  return RELATIVE_TIME.format(Math.round(hours / 24), "day");
+}
+
+function formatDay(iso: string): string {
+  return new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("es", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+const COVER_FADE =
+  "linear-gradient(to bottom, #000 55%, transparent 100%)";
+
+function displayHost(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
 
 function perceivedLuminance(hex: string): number {
   const clean = hex.replace("#", "").padEnd(6, "0");
@@ -95,6 +120,7 @@ interface PublicProfileCardProps {
   projects: Project[];
   githubStats?: GithubStats | null;
   hideShare?: boolean;
+  demo?: boolean;
 }
 
 export function PublicProfileCard({
@@ -102,6 +128,7 @@ export function PublicProfileCard({
   projects,
   githubStats: initialStats,
   hideShare = false,
+  demo = false,
 }: PublicProfileCardProps) {
   const { notifySuccess, notifyError } = useNotifications();
   const reduceMotion = useReducedMotion();
@@ -128,8 +155,6 @@ export function PublicProfileCard({
   const { scrollY } = useScroll();
   const coverOpacity = useTransform(scrollY, [0, 300], [1, 0]);
   const coverScale = useTransform(scrollY, [0, 300], [1, 1.07]);
-  const coverBlurPx = useTransform(scrollY, [0, 300], [0, 10]);
-  const coverBlurFilter = useTransform(coverBlurPx, (v) => `blur(${v}px)`);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -146,8 +171,6 @@ export function PublicProfileCard({
     }
   };
 
-  const isHero = profile.layout === "hero";
-  const isGradient = profile.bgType === "gradient";
   const isLight = perceivedLuminance(profile.bgColor) > 0.5;
   const textPrimary = isLight ? "rgba(0,0,0,0.88)" : "rgba(255,255,255,0.92)";
   const textMuted = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.32)";
@@ -166,7 +189,17 @@ export function PublicProfileCard({
   const isOutline = bVariant === "outline";
   const isGlass = bVariant === "glass";
   const bColor = profile.buttonColor ?? profile.accentColor;
-  const bTextColor = profile.buttonTextColor ?? textPrimary;
+  const isSolid = !isOutline && !isGlass;
+  const linkText = isSolid
+    ? (profile.buttonTextColor ??
+      (perceivedLuminance(bColor) > 0.5 ? "#0a0a0a" : "#ffffff"))
+    : textPrimary;
+  const linkMuted = isSolid
+    ? `color-mix(in srgb, ${linkText} 68%, transparent)`
+    : textSecondary;
+  const linkIconColor = isSolid ? linkText : profile.accentColor;
+  const radiusPx = profile.buttonRadius ?? 8;
+  const iconTileRadius = radiusPx >= 9999 ? "9999px" : `${Math.max(radiusPx - 8, 6)}px`;
   const bShadow = BUTTON_SHADOW_CSS[profile.buttonShadow ?? "none"] ?? "none";
 
   const cardBg =
@@ -181,13 +214,9 @@ export function PublicProfileCard({
         backgroundSize: "cover",
         backgroundPosition: "center",
       }
-    : profile.bgType === "gradient"
-      ? {
-          background: `linear-gradient(135deg, color-mix(in srgb, ${profile.bgColor} 90%, #000 50%) 0%, ${profile.accentColor}45 100%)`,
-        }
-      : {
-          background: `linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 60%, #000 40%) 0%, ${profile.accentColor}20 100%)`,
-        };
+    : {
+        background: `radial-gradient(120% 80% at 20% 0%, ${profile.accentColor}90 0%, transparent 60%), radial-gradient(90% 70% at 90% 30%, color-mix(in srgb, ${profile.accentColor} 45%, #000) 0%, transparent 65%), linear-gradient(160deg, color-mix(in srgb, ${profile.bgColor} 70%, ${profile.accentColor}) 0%, ${profile.bgColor} 100%)`,
+      };
 
   const linkStyle = isOutline
     ? {
@@ -204,15 +233,10 @@ export function PublicProfileCard({
           boxShadow: bShadow,
         }
       : {
-          border: `1px solid ${bColor}28`,
-          background: `${bColor}0d`,
+          border: "1px solid transparent",
+          background: bColor,
           boxShadow: bShadow,
         };
-
-  const repoStyle = {
-    border: `1px solid ${profile.accentColor}20`,
-    background: `${profile.accentColor}08`,
-  };
 
   const stickers: PlacedSticker[] = Array.isArray(profile.stickers)
     ? profile.stickers
@@ -242,13 +266,7 @@ export function PublicProfileCard({
           iconColor: "#4ade80",
         },
         {
-          label: "Siguiendo",
-          value: formatCount(githubStats.user.following),
-          Icon: UserCheck,
-          iconColor: "#60a5fa",
-        },
-        {
-          label: "Stars recibidas",
+          label: "Stars",
           value: formatCount(totalStars),
           Icon: Star,
           iconColor: "#facc15",
@@ -256,381 +274,452 @@ export function PublicProfileCard({
       ]
     : [];
 
-  const DISPLAY_WEEKS = 28;
+  const stackLanguages = (githubStats?.topLanguages ?? [])
+    .map((l) => ({ ...l, icon: getDevIconUrl(l.language) }))
+    .filter((l) => l.icon)
+    .slice(0, 4);
+
   const contributions = githubStats?.contributions ?? [];
-  const recentDays = contributions.slice(-(DISPLAY_WEEKS * 7));
+  const recentDays = contributions.slice(-(HEATMAP_WEEKS * 7));
+  // Las fechas se normalizan a YYYY-MM-DD (UTC); getUTCDay evita el corrimiento de un día en zonas horarias negativas.
   const firstDow =
-    recentDays.length > 0 ? (new Date(recentDays[0].date).getDay() + 6) % 7 : 0;
+    recentDays.length > 0
+      ? new Date(`${recentDays[0].date.slice(0, 10)}T00:00:00Z`).getUTCDay()
+      : 0;
   const paddedDays = [...Array(firstDow).fill(null), ...recentDays];
   const heatmapWeeks: ((typeof recentDays)[0] | null)[][] = [];
   for (let i = 0; i < paddedDays.length; i += 7) {
     heatmapWeeks.push(paddedDays.slice(i, i + 7));
   }
+  let lastLabelWeek = -3;
+  const monthLabels = heatmapWeeks.map((week, wi) => {
+    const firstOfMonth = week.find(
+      (d) => d && Number(d.date.slice(8, 10)) <= 7,
+    );
+    if (!firstOfMonth || wi - lastLabelWeek < 3) return null;
+    lastLabelWeek = wi;
+    return new Date(`${firstOfMonth.date.slice(0, 10)}T00:00:00Z`).toLocaleDateString("es", {
+      month: "short",
+      timeZone: "UTC",
+    });
+  });
+  const periodContributions = recentDays.reduce((s, d) => s + d.count, 0);
+  const heatColor = (level: number) =>
+    level === 0
+      ? isLight
+        ? "rgba(0,0,0,0.06)"
+        : "rgba(255,255,255,0.06)"
+      : `color-mix(in srgb, ${profile.accentColor} ${HEATMAP_MIX[level]}%, ${isLight ? "#fff" : profile.bgColor})`;
+
+  const ctaHref = profile.githubUsername && !demo
+    ? `https://github.com/${profile.githubUsername}`
+    : null;
+  const surfaceSubtle = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.06)";
+  const coverHeight = 300;
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[480px] rounded-[30px] isolate"
+      className="relative mx-auto w-full max-w-[480px] rounded-[28px] isolate"
       style={{
         fontFamily,
-        boxShadow:
-          "0 12px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.03)",
-        background: isGradient ? cardBg : undefined,
+        background: cardBg,
+        border: "1px solid transparent",
+        boxShadow: `0 0 0 1px ${isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)"}, 0 2px 4px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.28)`,
       }}
     >
       {!hideShare && (
         <button
           type="button"
           onClick={() => setShareOpen(true)}
-          className="absolute top-4 right-4 z-30 flex size-10 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95"
-          style={{
-            background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.10)",
-            color: textPrimary,
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-          }}
+          className="absolute top-3 right-3 z-30 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/90 text-black/80 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.16)] transition-[scale,background-color] duration-150 ease-out [-webkit-tap-highlight-color:transparent] hover:bg-white active:scale-[0.96]"
           aria-label="Compartir perfil"
         >
-          <Share2 className="size-5" />
+          <Share2 className="size-[18px]" strokeWidth={2} />
         </button>
       )}
 
-      {isHero && (
-        <div
-          ref={coverRef}
-          className="relative w-full overflow-hidden rounded-t-[30px]"
-          style={{ height: 400 }}
-        >
-          {!isGradient && (
-            <div className="absolute inset-0" style={{ background: cardBg }} />
-          )}
-
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              ...coverBg,
-              opacity: coverOpacity,
-              scale: coverScale,
-              filter: coverBlurFilter,
-              ...(isGradient && {
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
-                maskImage:
-                  "linear-gradient(to bottom, black 0%, black 45%, transparent 90%)",
-              }),
-            }}
-          />
-
-          {!isGradient && (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to bottom,
-                  transparent 0%,
-                  transparent 45%,
-                  ${profile.bgColor}14 55%,
-                  ${profile.bgColor}47 65%,
-                  ${profile.bgColor}8C 75%,
-                  ${profile.bgColor}D1 85%,
-                  ${profile.bgColor}F2 92%,
-                  ${profile.bgColor} 100%
-                )`,
-              }}
-            />
-          )}
-
-          {!isGradient && (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to right, ${profile.bgColor}4d 0%, transparent 22%, transparent 78%, ${profile.bgColor}4d 100%)`,
-              }}
-            />
-          )}
-        </div>
-      )}
-
       <div
-        className={
-          isHero
-            ? "px-6 pb-8 pt-0 rounded-b-[30px]"
-            : "px-6 pb-8 pt-0 rounded-[30px]"
-        }
-        style={{ background: isGradient ? "transparent" : cardBg }}
+        ref={coverRef}
+        className="relative w-full overflow-hidden rounded-t-[27px]"
+        style={{ height: coverHeight }}
       >
-        <div
-          className="relative z-10 flex flex-col items-center pb-5 pt-0"
+        <motion.div
+          className="absolute inset-0"
           style={{
-            marginTop: isHero ? "-36px" : "0",
-            paddingTop: isHero ? "0" : "32px",
+            ...coverBg,
+            ...(!reduceMotion &&
+              !demo && { opacity: coverOpacity, scale: coverScale }),
+            WebkitMaskImage: COVER_FADE,
+            maskImage: COVER_FADE,
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 px-6 pb-8">
+        <div
+          className="relative size-[88px] overflow-hidden rounded-full"
+          style={{
+            marginTop: -128,
+            background: profile.avatarUrl
+              ? profile.bgColor
+              : `color-mix(in srgb, ${profile.accentColor} 25%, ${profile.bgColor})`,
+            boxShadow: demo
+              ? "0 12px 32px rgba(0,0,0,0.32)"
+              : `0 0 0 3px ${profile.bgColor}, 0 0 0 5px ${profile.accentColor}99, 0 12px 32px rgba(0,0,0,0.32)`,
           }}
         >
-          <div
-            className="size-[72px] overflow-hidden rounded-full"
-            style={{
-              background: profile.avatarUrl
-                ? "transparent"
-                : `${profile.accentColor}25`,
-              boxShadow: `0 0 0 2px ${profile.bgColor}, 0 0 0 4px ${profile.accentColor}80, 0 6px 28px ${profile.accentColor}55, 0 2px 8px rgba(0,0,0,0.25)`,
-            }}
-          >
-            {profile.avatarUrl ? (
-              <Image
-                src={profile.avatarUrl}
-                alt={profile.displayName}
-                width={72}
-                height={72}
-                className="size-full object-cover"
-                priority
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center">
-                <span
-                  className="text-base font-bold"
-                  style={{ color: textPrimary }}
-                >
-                  {profile.displayName.slice(0, 2).toUpperCase()}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <p
-            className="mt-2.5 text-[13px] font-semibold"
-            style={{ color: textPrimary, fontFamily: titleFontFamily }}
-          >
-            {profile.displayName}
-          </p>
-          <p
-            className="mt-0.5 text-[11px]"
-            style={{ color: `${profile.accentColor}cc` }}
-          >
-            @{profile.username}
-          </p>
-
-          {profile.location && (
-            <div className="mt-1.5 flex items-center justify-center gap-1">
-              <MapPin
-                className="size-3 shrink-0"
-                style={{ color: textSecondary }}
-              />
-              <span className="text-[11px]" style={{ color: textSecondary }}>
-                {profile.location}
+          {profile.avatarUrl ? (
+            <Image
+              src={profile.avatarUrl}
+              alt={profile.displayName}
+              width={88}
+              height={88}
+              className={cn(
+                "size-full rounded-full object-cover outline-1 -outline-offset-1",
+                isLight ? "outline-black/10" : "outline-white/10",
+              )}
+              priority
+            />
+          ) : (
+            <div className="flex size-full items-center justify-center">
+              <span
+                className="text-xl font-bold"
+                style={{ color: textPrimary }}
+              >
+                {profile.displayName.slice(0, 2).toUpperCase()}
               </span>
             </div>
           )}
+        </div>
 
-          {profile.bio && (
-            <p
-              className="mt-2 max-w-xs text-center text-[12px] leading-relaxed"
-              style={{ color: textSecondary }}
-            >
-              {profile.bio}
-            </p>
-          )}
+        <h1
+          className="mt-3 text-[26px] font-bold leading-tight tracking-[-0.02em] text-balance"
+          style={{ color: textPrimary, fontFamily: titleFontFamily }}
+        >
+          {profile.displayName}
+        </h1>
 
-          {primaryLinks.length > 0 && (
-            <div className="mt-3 flex flex-wrap justify-center gap-3">
-              {primaryLinks.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={link.title}
-                  onClick={() => trackClick(link.id)}
-                  className="flex size-10 shrink-0 items-center justify-center transition-all hover:opacity-80 hover:scale-110"
-                >
+        {profile.bio && (
+          <p
+            className="mt-1 text-[13px] leading-relaxed text-pretty"
+            style={{
+              color: textSecondary,
+              fontFamily:
+                profile.bio.length > 40 ? FONT_CSS.inter : undefined,
+            }}
+          >
+            {profile.bio}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div
+            className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12px]"
+            style={{ color: textSecondary }}
+          >
+            <span className="flex items-center gap-1.5">
+              <AtSign className="size-3.5 shrink-0" strokeWidth={1.75} />
+              {profile.username}
+            </span>
+            {profile.location && (
+              <span className="flex min-w-0 items-center gap-1.5">
+                <MapPin className="size-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="truncate">{profile.location}</span>
+              </span>
+            )}
+          </div>
+
+          {stackLanguages.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {stackLanguages.map((l) => (
                   <Image
-                    src={iconUrl(link.icon ?? "link", profile.accentColor)}
-                    alt={link.title}
-                    width={50}
-                    height={50}
+                    key={l.language}
+                    src={l.icon!}
+                    alt={l.language}
+                    title={`${l.language} · ${l.pct}%`}
+                    width={16}
+                    height={16}
                     unoptimized
-                    className="size-7 object-contain"
+                    className="size-4 object-contain"
                   />
-                </a>
-              ))}
+                ))}
+              </div>
+              <span
+                className="text-[12px] font-medium"
+                style={{ color: textPrimary }}
+              >
+                Stack
+              </span>
             </div>
           )}
         </div>
 
-        {statsItems.length > 0 && (
-          <>
-            <div className="flex items-center justify-center">
-              {statsItems.map(({ label, value, Icon, iconColor }, i) => (
-                <div key={label} className="flex items-center">
-                  {i > 0 && (
-                    <span
-                      className="mx-3 text-[10px]"
-                      style={{ color: textMuted }}
-                    >
-                      •
-                    </span>
-                  )}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="flex items-center gap-1">
-                      <Icon className="size-[14px]" style={{ color: iconColor }} />
+        {primaryLinks.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {primaryLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={link.title}
+                aria-label={link.title}
+                onClick={() => trackClick(link.id)}
+                className="flex size-11 shrink-0 items-center justify-center rounded-full transition-[scale,opacity] duration-150 ease-out hover:opacity-80 active:scale-[0.96]"
+                style={{ background: surfaceSubtle }}
+              >
+                <Image
+                  src={iconUrl(link.icon ?? "link", profile.accentColor)}
+                  alt=""
+                  width={20}
+                  height={20}
+                  unoptimized
+                  className="size-5 object-contain"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {(statsItems.length > 0 || ctaHref) && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+            {statsItems.length > 0 && (
+              <dl className="flex items-stretch">
+                {statsItems.map(({ label, value, Icon, iconColor }, i) => (
+                  <div
+                    key={label}
+                    className="flex flex-col items-center gap-1 px-3.5 first:pl-0"
+                    style={
+                      i > 0
+                        ? { borderLeft: `1px solid ${dividerColor}` }
+                        : undefined
+                    }
+                  >
+                    <dd className="flex items-center gap-1.5">
+                      <Icon
+                        className="size-3.5"
+                        strokeWidth={2.25}
+                        style={{ color: iconColor }}
+                      />
                       <span
-                        className="text-[15px] font-bold tabular-nums leading-none"
+                        className="text-[15px] font-semibold tabular-nums leading-none"
                         style={{ color: textPrimary }}
                       >
                         {value}
                       </span>
-                    </div>
-                    <span
-                      className="text-[9px] leading-tight"
+                    </dd>
+                    <dt
+                      className="text-[11px] leading-tight"
                       style={{ color: textMuted }}
                     >
                       {label}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {heatmapWeeks.length > 0 && (
-          <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <div className="mb-2.5 flex items-baseline justify-between">
-              <span
-                className="text-[9px] font-semibold uppercase tracking-widest"
-                style={{ color: textMuted }}
-              >
-                Contribuciones
-              </span>
-              {githubStats && (
-                <span
-                  className="text-[9px] tabular-nums"
-                  style={{ color: textMuted }}
-                >
-                  {formatCount(githubStats.totalContributions)} este año
-                </span>
-              )}
-            </div>
-            <div className="scroll-hide overflow-x-auto">
-              <div className="flex justify-center gap-[3px]">
-                {heatmapWeeks.map((week, wi) => (
-                  <div key={wi} className="flex flex-col gap-[3px]">
-                    {Array.from({ length: 7 }).map((_, di) => {
-                      const day = week[di] ?? null;
-                      const level = day?.level ?? -1;
-                      return (
-                        <div
-                          key={di}
-                          title={
-                            day
-                              ? `${day.date}: ${day.count} contributions`
-                              : undefined
-                          }
-                          style={{
-                            width: 11,
-                            height: 11,
-                            borderRadius: 3,
-                            background:
-                              level < 0
-                                ? `${profile.accentColor}0a`
-                                : `${profile.accentColor}${HEATMAP_ALPHA[Math.max(0, level)]}`,
-                          }}
-                        />
-                      );
-                    })}
+                    </dt>
                   </div>
                 ))}
+              </dl>
+            )}
+
+            {ctaHref && (
+              <a
+                href={ctaHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Ver perfil de ${profile.githubUsername} en GitHub (abre en una pestaña nueva)`}
+                className="group ml-auto flex h-11 items-center gap-2.5 rounded-xl pl-2 pr-3 text-[13px] font-medium outline-none transition-[scale,background-color,border-color] duration-150 ease-out hover:bg-[var(--cta-hover)] focus-visible:ring-2 focus-visible:ring-[var(--cta-ring)] active:scale-[0.97] motion-reduce:active:scale-100"
+                style={
+                  {
+                    color: textPrimary,
+                    "--cta-hover": isLight
+                      ? "rgba(0,0,0,0.09)"
+                      : "rgba(255,255,255,0.1)",
+                    "--cta-ring": profile.accentColor,
+                  } as React.CSSProperties
+                }
+              >
+                <span
+                  className="flex size-7 items-center justify-center rounded-lg"
+                  style={{
+                    background: isLight ? "#111" : "rgba(255,255,255,0.94)",
+                    color: isLight ? "#fff" : "#0a0a0a",
+                  }}
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="size-4"
+                  >
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                  </svg>
+                </span>
+                <span className="flex flex-col leading-none">
+                  <span className="text-[10px]" style={{ color: textMuted }}>
+                    github.com/
+                  </span>
+                  <span className="mt-0.5 max-w-[9rem] truncate">
+                    {profile.githubUsername}
+                  </span>
+                </span>
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="size-4 shrink-0 opacity-50 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                />
+              </a>
+            )}
+          </div>
+        )}
+
+        {heatmapWeeks.length > 0 && githubStats && (
+          <section aria-label="Actividad en GitHub">
+            <div className="my-5 h-px" style={{ background: dividerColor }} />
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2
+                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: textMuted }}
+              >
+                Actividad
+              </h2>
+              <span
+                className="text-[11px] tabular-nums"
+                style={{ color: textMuted }}
+                suppressHydrationWarning
+              >
+                <span style={{ color: textPrimary }}>
+                  {formatCount(periodContributions)}
+                </span>{" "}
+                contribuciones · {timeAgo(githubStats.fetchedAt)}
+              </span>
+            </div>
+
+            <div
+              role="img"
+              aria-label={`${periodContributions} contribuciones en los últimos ${HEATMAP_WEEKS * 7} días`}
+              className="grid gap-[3px]"
+              style={{
+                gridTemplateColumns: `repeat(${heatmapWeeks.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {monthLabels.map((label, wi) => (
+                <span
+                  key={`m-${wi}`}
+                  aria-hidden
+                  className="h-4 overflow-visible whitespace-nowrap text-[10px] capitalize leading-none"
+                  style={{ gridRow: 1, gridColumn: wi + 1, color: textMuted }}
+                >
+                  {label}
+                </span>
+              ))}
+              {heatmapWeeks.flatMap((week, wi) =>
+                Array.from({ length: 7 }, (_, di) => {
+                  const day = week[di] ?? null;
+                  return (
+                    <span
+                      key={`${wi}-${di}`}
+                      aria-hidden
+                      title={
+                        day
+                          ? `${day.count} contribuciones · ${formatDay(day.date)}`
+                          : undefined
+                      }
+                      className="aspect-square w-full rounded-[3px]"
+                      style={{
+                        gridRow: di + 2,
+                        gridColumn: wi + 1,
+                        background: day ? heatColor(day.level) : "transparent",
+                        boxShadow:
+                          day && day.level > 0
+                            ? "inset 0 0 0 1px rgba(255,255,255,0.06)"
+                            : undefined,
+                      }}
+                    />
+                  );
+                }),
+              )}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-[11px]" style={{ color: textMuted }}>
+                {formatCount(githubStats.totalContributions)} en el último año
+              </span>
+              <div className="flex items-center gap-1" aria-hidden>
+                <span className="mr-1 text-[10px]" style={{ color: textMuted }}>
+                  Menos
+                </span>
+                {HEATMAP_MIX.map((_, level) => (
+                  <span
+                    key={level}
+                    className="size-2.5 rounded-[2px]"
+                    style={{ background: heatColor(level) }}
+                  />
+                ))}
+                <span className="ml-1 text-[10px]" style={{ color: textMuted }}>
+                  Más
+                </span>
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-end gap-1.5">
-              <span className="text-[8px]" style={{ color: textMuted }}>
-                Menos
-              </span>
-              {["0a", ...HEATMAP_ALPHA].map((alpha) => (
-                <div
-                  key={alpha}
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: 2,
-                    background: `${profile.accentColor}${alpha}`,
-                  }}
-                />
-              ))}
-              <span className="text-[8px]" style={{ color: textMuted }}>
-                Más
-              </span>
-            </div>
-          </>
+          </section>
         )}
 
         {hasProjects && (
           <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <p
-              className="mb-2 text-[9px] font-semibold uppercase tracking-widest"
+            <div className="my-5 h-px" style={{ background: dividerColor }} />
+            <h2
+              className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
               style={{ color: textMuted }}
             >
               Proyectos destacados
-            </p>
-            <div
-              className="grid gap-2"
-              style={{
-                gridTemplateColumns: `repeat(${Math.min(projects.length, 3)}, minmax(0, 1fr))`,
-              }}
-            >
+            </h2>
+            <ul className="flex flex-col">
               {projects.map((project, i) => (
-                <motion.a
+                <motion.li
                   key={project.id}
-                  href={project.url ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col justify-between rounded-lg p-3"
-                  style={repoStyle}
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
                     duration: 0.2,
                     delay: i * 0.05,
                     ease: "easeOut",
                   }}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                  style={i > 0 ? { borderTop: `1px solid ${dividerColor}` } : undefined}
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-1 mb-1.5">
-                      <p
-                        className="text-[11px] font-bold leading-tight break-all line-clamp-2"
-                        style={{
-                          color:
-                            PROJECT_TITLE_COLORS[
-                              i % PROJECT_TITLE_COLORS.length
-                            ],
-                        }}
+                  <a
+                    href={project.url ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-3 outline-none transition-[background-color,scale] duration-150 ease-out hover:bg-[var(--row-hover)] focus-visible:ring-2 focus-visible:ring-[var(--row-ring)] active:scale-[0.99] motion-reduce:active:scale-100"
+                    style={
+                      {
+                        "--row-hover": surfaceSubtle,
+                        "--row-ring": profile.accentColor,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate text-[13px] font-medium leading-tight"
+                        style={{ color: textPrimary }}
                       >
                         {project.title || project.githubRepo}
-                      </p>
-                      <ExternalLink
-                        className="size-3 shrink-0 mt-0.5"
-                        style={{ color: `${profile.accentColor}80` }}
-                      />
-                    </div>
-                    {project.description && (
-                      <p
-                        className="text-[10px] leading-relaxed line-clamp-2"
-                        style={{ color: textMuted }}
-                      >
-                        {project.description}
-                      </p>
-                    )}
-                  </div>
+                      </span>
+                      {project.description && (
+                        <span
+                          className="mt-1 block truncate text-[11px] leading-snug"
+                          style={{ color: textMuted }}
+                        >
+                          {project.description}
+                        </span>
+                      )}
+                    </span>
 
-                  <div className="mt-2.5 flex items-center justify-between gap-1">
-                    {project.language ? (
+                    {project.language && (
                       <span
-                        className="flex items-center gap-1 text-[9px]"
+                        className="flex shrink-0 items-center gap-1.5 text-[11px]"
                         style={{ color: textMuted }}
                       >
                         <span
-                          className="block size-1.5 rounded-full shrink-0"
+                          aria-hidden="true"
+                          className="block size-1.5 rounded-full"
                           style={{
                             background:
                               LANG_COLOR[project.language] ??
@@ -639,40 +728,46 @@ export function PublicProfileCard({
                         />
                         {project.language}
                       </span>
-                    ) : (
-                      <span />
                     )}
                     {project.stars > 0 && (
                       <span
-                        className="flex items-center gap-0.5 text-[9px] shrink-0"
+                        className="flex shrink-0 items-center gap-1 text-[11px] tabular-nums"
                         style={{ color: textMuted }}
                       >
-                        <Star className="size-2.5 fill-current" />
+                        <Star aria-hidden="true" className="size-3 fill-current" />
+                        <span className="sr-only">Stars:</span>
                         {project.stars >= 1000
                           ? `${(project.stars / 1000).toFixed(1)}k`
                           : project.stars}
                       </span>
                     )}
-                  </div>
-                </motion.a>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0 opacity-30 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                      style={{ color: textPrimary }}
+                    />
+                  </a>
+                </motion.li>
               ))}
-            </div>
+            </ul>
           </>
         )}
 
         {secondaryLinks.length > 0 && (
           <>
-            <div className="my-4 h-px" style={{ background: dividerColor }} />
-            <p
-              className="mb-2 text-[9px] font-semibold uppercase tracking-widest"
+            <div className="my-5 h-px" style={{ background: dividerColor }} />
+            <h2
+              className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
               style={{ color: textMuted }}
             >
               Links
-            </p>
+            </h2>
             <div className="flex flex-col gap-2">
               {secondaryLinks.map((link, i) => {
                 const isFeatured =
                   link.layout === "featured" && link.previewImage;
+                const featuredText = isFeatured ? textPrimary : linkText;
+                const host = displayHost(link.url);
                 return (
                   <motion.a
                     key={link.id}
@@ -681,10 +776,8 @@ export function PublicProfileCard({
                     rel="noopener noreferrer"
                     onClick={() => trackClick(link.id)}
                     className={cn(
-                      "flex w-full overflow-hidden",
-                      isFeatured
-                        ? "flex-col"
-                        : "min-h-13 w-full items-center  gap-3 px-4 py-3",
+                      "group flex w-full overflow-hidden [-webkit-tap-highlight-color:transparent]",
+                      isFeatured ? "flex-col" : "min-h-[60px] items-center",
                     )}
                     style={{
                       borderRadius: isFeatured ? featuredRadius : bRadius,
@@ -695,69 +788,85 @@ export function PublicProfileCard({
                           }
                         : linkStyle),
                     }}
-                    initial={{ opacity: 0, y: 6 }}
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
                       duration: 0.2,
                       delay: i * 0.05,
                       ease: "easeOut",
                     }}
-                    whileHover={{ y: -2, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={reduceMotion ? undefined : { y: -2, boxShadow: `0 10px 28px -10px ${bColor}99` }}
+                    whileTap={{ scale: 0.96 }}
                   >
                     {isFeatured && (
                       <Image
                         src={link.previewImage!}
-                        alt={link.title}
+                        alt=""
                         width={480}
-                        height={120}
-                        className="h-[120px] w-full object-cover"
-                        style={{
-                          borderTopLeftRadius: featuredRadius,
-                          borderTopRightRadius: featuredRadius,
-                        }}
+                        height={140}
+                        className="h-[140px] w-full object-cover"
                         unoptimized
                       />
                     )}
-                    <div
-                      className={cn(
-                        "flex w-full items-center gap-3",
-                        isFeatured && "px-4 py-3",
-                      )}
-                    >
-                      <div className="flex size-5 shrink-0 items-center justify-start">
+                    <div className="flex w-full items-center gap-3 py-2 pl-2 pr-4">
+                      <span
+                        className="flex size-10 shrink-0 items-center justify-center overflow-hidden"
+                        style={{
+                          borderRadius: iconTileRadius,
+                          background: `color-mix(in srgb, ${featuredText} 12%, transparent)`,
+                        }}
+                      >
                         {!isFeatured && link.previewImage ? (
                           <Image
                             src={link.previewImage}
-                            alt={link.title}
-                            width={20}
-                            height={20}
+                            alt=""
+                            width={40}
+                            height={40}
                             unoptimized
-                            className="size-5 rounded object-cover"
+                            className="size-full object-cover"
                           />
                         ) : link.icon ? (
                           <Image
-                            src={iconUrl(link.icon, profile.accentColor)}
-                            alt={link.icon}
-                            width={14}
-                            height={14}
+                            src={iconUrl(
+                              link.icon,
+                              isFeatured ? profile.accentColor : linkIconColor,
+                            )}
+                            alt=""
+                            width={18}
+                            height={18}
                             unoptimized
-                            className="size-3.5 object-contain"
+                            className="size-[18px] object-contain"
                           />
-                        ) : null}
-                      </div>
-                      <span
-                        className="flex-1 text-center text-[12px] font-medium leading-snug"
-                        style={{ color: textPrimary }}
-                      >
-                        {link.title}
+                        ) : (
+                          <Link2
+                            className="size-[18px]"
+                            strokeWidth={2}
+                            style={{ color: featuredText }}
+                          />
+                        )}
                       </span>
-                      <div className="flex size-5 shrink-0 items-center justify-end">
-                        <ChevronRight
-                          className="size-3.5"
-                          style={{ color: `${textPrimary}60` }}
-                        />
-                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className="block truncate text-[15px] font-semibold leading-snug"
+                          style={{ color: featuredText }}
+                        >
+                          {link.title}
+                        </span>
+                        {host && (
+                          <span
+                            className="block truncate text-[11px] leading-snug"
+                            style={{ color: isFeatured ? textSecondary : linkMuted }}
+                          >
+                            {host}
+                          </span>
+                        )}
+                      </span>
+                      <ArrowUpRight
+                        aria-hidden
+                        className="size-4 shrink-0 opacity-50 transition-[opacity,translate] duration-150 ease-out group-hover:opacity-100 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+                        strokeWidth={2}
+                        style={{ color: featuredText }}
+                      />
                     </div>
                   </motion.a>
                 );
@@ -766,9 +875,9 @@ export function PublicProfileCard({
           </>
         )}
 
-        <div className="mt-8 text-center">
+        <div className="mt-10 text-center">
           <span
-            className="text-[9px] uppercase tracking-widest"
+            className="text-[10px] uppercase tracking-[0.08em]"
             style={{ color: textMuted }}
           >
             Creado por
@@ -855,7 +964,7 @@ export function PublicProfileCard({
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm cursor-pointer font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm cursor-pointer font-medium text-white transition-[scale,opacity] duration-150 ease-out hover:opacity-90 active:scale-[0.96]"
               style={{ background: profile.accentColor }}
             >
               {copied ? (
@@ -870,13 +979,13 @@ export function PublicProfileCard({
       </Dialog>
 
       {stickers.length > 0 && (
-        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden sm:overflow-visible">
-          {stickers.map((sticker, idx) => {
-            const meta = PROGRAMMING_STICKERS.find(
-              (s) => s.slug === sticker.id,
-            );
-            const color = meta?.brandColor ?? profile.accentColor;
-            const size = Math.round(56 * (sticker.scale ?? 1));
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[28px] lg:overflow-visible"
+        >
+          {stickers.map((raw, idx) => {
+            const sticker = clampSticker(raw);
+            const size = Math.round(STICKER_BASE_SIZE * (sticker.scale ?? 1));
             const isFloating = Boolean(sticker.animated) && !reduceMotion;
             return (
               <motion.div
@@ -885,8 +994,6 @@ export function PublicProfileCard({
                 style={{
                   left: `${sticker.x}%`,
                   top: `${sticker.y}%`,
-                  width: size,
-                  height: size,
                   marginLeft: -size / 2,
                   marginTop: -size / 2,
                   rotate: sticker.rotation,
@@ -903,22 +1010,12 @@ export function PublicProfileCard({
                     : undefined
                 }
               >
-                <div
-                  className="absolute rounded-xl bg-white"
-                  style={{
-                    inset: -5,
-                    zIndex: -1,
-                    boxShadow: "0 3px 12px rgba(0,0,0,0.28)",
-                  }}
-                />
-                <Image
-                  src={iconUrl(sticker.id, color)}
-                  alt={sticker.id}
-                  width={size}
-                  height={size}
-                  unoptimized
-                  className="size-full select-none object-contain"
-                  draggable={false}
+                <StickerTile
+                  slug={sticker.id}
+                  color={stickerColor(sticker.id, profile.accentColor)}
+                  size={size}
+                  live={isFloating}
+                  delay={(idx % 4) * 0.8}
                 />
               </motion.div>
             );
