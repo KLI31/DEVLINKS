@@ -620,3 +620,41 @@
     animation: none;
   }
 }
+
+/* Brillo holográfico de StickerTile */
+@keyframes holo-sweep {
+  to {
+    translate: 70px 0;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .holo-tile:hover .holo-glare {
+    animation: holo-sweep 700ms ease-out;
+  }
+}
+
+@keyframes holo-sweep-loop {
+  0%,
+  55% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 70px 0;
+  }
+}
+
+@keyframes holo-shift {
+  to {
+    translate: -48px 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .holo-live .holo-foil {
+    animation: holo-shift 7s ease-in-out var(--d, 0s) infinite alternate;
+  }
+  .holo-live .holo-glare {
+    animation: holo-sweep-loop 3.6s ease-in-out var(--d, 0s) infinite;
+  }
+}
